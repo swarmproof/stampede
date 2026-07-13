@@ -5,8 +5,8 @@ abstract: "The wind tunnel for the agent economy. Part of the Agent Reliability 
 authors:
   - family-names: Boudoukha
     given-names: Maroua
-repository-code: "https://github.com/AgentReliability/stampede"
-url: "https://github.com/AgentReliability/stampede"
+repository-code: "https://github.com/swarmproof/stampede"
+url: "https://github.com/swarmproof/stampede"
 license: Apache-2.0
 type: software
 keywords:
