@@ -34,7 +34,7 @@ stampede run --target "python my_server.py" --size 200 --live
 
 See [`SPEC.md`](./SPEC.md) for the full design and [`ROADMAP.md`](./ROADMAP.md) for what ships when.
 
-## Part of the Agent Reliability toolkit
+## Part of the Swarm Proof toolkit
 
 *Trust infrastructure for the agent economy — seven projects, one thesis.*
 
