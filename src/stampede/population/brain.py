@@ -156,13 +156,22 @@ class LLMBrain:
         user = agent.goal.text
         if obs.last_error:
             user += f"\n\n(Your previous attempt failed: {obs.last_error})"
-        comp = await self.provider.complete(
-            system=system,
-            messages=[{"role": "user", "content": user}],
-            tools=tools,
-            model=agent.binding.model,
-            temperature=0.0,
-        )
+        try:
+            comp = await self.provider.complete(
+                system=system,
+                messages=[{"role": "user", "content": user}],
+                tools=tools,
+                model=agent.binding.model,
+                temperature=0.0,  # temp 0 for reproducibility within the noise band
+            )
+        except Exception as exc:
+            # A provider hiccup (Ollama down, model missing, timeout) fails THIS
+            # agent cleanly — the run and its report survive (NFR-REL-01).
+            return Decision(
+                tool=None,
+                reasoning=f"provider error: {type(exc).__name__}: {exc}",
+                give_up=True,
+            )
         if not comp.tool_calls:
             return Decision(
                 tool=None,
@@ -179,6 +188,31 @@ class LLMBrain:
             input_tokens=comp.input_tokens,
             output_tokens=comp.output_tokens,
         )
+
+
+class BrainPool:
+    """Routes each agent to a brain by its model binding — enables model mixing.
+
+    In ``--dry-run`` every agent uses the shared deterministic HeuristicBrain. In a
+    live run, ``ollama:llama3`` agents get an ``LLMBrain`` over the Ollama provider
+    while ``dry-run:heuristic`` agents in the same swarm stay heuristic. One live
+    provider is built and cached per provider name.
+    """
+
+    def __init__(self, dry_run: bool) -> None:
+        self.dry_run = dry_run
+        self._heuristic = HeuristicBrain()
+        self._llm_by_provider: dict[str, LLMBrain] = {}
+
+    def for_agent(self, agent: Agent) -> Brain:
+        provider = agent.binding.provider
+        if self.dry_run or provider in {"dry-run", "heuristic"}:
+            return self._heuristic
+        if provider not in self._llm_by_provider:
+            from stampede.population.providers import build_provider
+
+            self._llm_by_provider[provider] = LLMBrain(build_provider(provider))
+        return self._llm_by_provider[provider]
 
 
 def _match_by_text(text: str, toolset: ToolSet) -> str | None:

@@ -19,9 +19,9 @@ from stampede.goals.synth import synthesize
 from stampede.observer.report import RunReport, build_report
 from stampede.orchestrator.engine import Orchestrator, RunOutcome
 from stampede.personas.loader import load_pack
-from stampede.population.brain import Brain, HeuristicBrain, LLMBrain
+from stampede.population.brain import BrainPool
 from stampede.population.factory import build_population
-from stampede.population.providers import build_provider, cost_usd
+from stampede.population.providers import cost_usd
 from stampede.targets import build_target
 from stampede.targets.base import TargetAdapter
 from stampede.targets.safety import SafetyGate
@@ -41,17 +41,6 @@ def _run_id(config: StampedeConfig) -> str:
     blob = config.model_dump_json().encode()
     short = hashlib.blake2b(blob, digest_size=4).hexdigest()
     return f"run_seed{config.seed}_{short}"
-
-
-def _select_brain(config: StampedeConfig, dry_run: bool) -> Brain:
-    if dry_run:
-        return HeuristicBrain()
-    # Live mode (experimental v0.1): one provider for the swarm, from the first model.
-    first = config.population.models[0] if config.population.models else "dry-run:heuristic"
-    provider_name = first.split(":", 1)[0]
-    if provider_name in {"dry-run", "heuristic"}:
-        return HeuristicBrain()
-    return LLMBrain(build_provider(provider_name))
 
 
 async def run_simulation(
@@ -91,12 +80,13 @@ async def run_simulation(
         seed=config.seed,
     )
 
-    # 5. Orchestrate under chaos.
-    brain = _select_brain(config, dry_run)
+    # 5. Orchestrate under chaos. The BrainPool routes each agent to a brain by its
+    # model binding — dry-run/heuristic agents stay deterministic; live-model agents
+    # (e.g. ollama:llama3) drive the real provider (FR-PF-04 model mixing).
     orch = Orchestrator(
         target=target,
         tracer=tracer,
-        brain=brain,
+        brains=BrainPool(dry_run=dry_run),
         chaos=ChaosPolicy(config.chaos),
         budget_usd=config.report.budget_usd,
     )

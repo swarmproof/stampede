@@ -24,7 +24,7 @@ from stampede.orchestrator.clock import AgentClock
 from stampede.orchestrator.curves import schedule_offsets
 from stampede.orchestrator.scheduler import AsyncioExecutor, Executor
 from stampede.population.agent import Agent, AgentState
-from stampede.population.brain import Brain, Observation
+from stampede.population.brain import BrainPool, Observation
 from stampede.population.providers import cost_usd
 from stampede.targets.base import AgentContext, IsolationMode, TargetAdapter, ToolCall, ToolSet
 from stampede.targets.safety import SafetyPosture
@@ -52,9 +52,14 @@ class _BudgetGuard:
         self.spent = 0.0
         self._lock = asyncio.Lock()
 
+    @property
+    def enforced(self) -> bool:
+        # A cap of 0 (or less) means "no cap" — free/local models never bite.
+        return self.cap > 0
+
     async def over(self) -> bool:
         async with self._lock:
-            return self.spent >= self.cap
+            return self.enforced and self.spent >= self.cap
 
     async def add(self, amount: float) -> None:
         async with self._lock:
@@ -67,14 +72,14 @@ class Orchestrator:
         *,
         target: TargetAdapter,
         tracer: Tracer,
-        brain: Brain,
+        brains: BrainPool,
         chaos: ChaosPolicy,
         budget_usd: float = 5.0,
         executor: Executor | None = None,
     ) -> None:
         self.target = target
         self.tracer = tracer
-        self.brain = brain
+        self.brains = brains
         self.chaos = chaos
         self.executor = executor or AsyncioExecutor()
         self.budget = _BudgetGuard(budget_usd)
@@ -115,7 +120,7 @@ class Orchestrator:
         factories = [_factory(a, off) for a, off in zip(agents, offsets, strict=True)]
         await self.executor.run(factories, concurrency=peak)
 
-        stopped = self.budget.spent >= self.budget.cap
+        stopped = self.budget.enforced and self.budget.spent >= self.budget.cap
         return RunOutcome(
             agents=agents,
             recovery=self._recovery,
@@ -182,7 +187,7 @@ class Orchestrator:
         chat.set(GenAI.OPERATION_NAME, "chat")
         chat.set(GenAI.PROVIDER_NAME, agent.binding.provider)
         chat.set(GenAI.REQUEST_MODEL, agent.binding.model)
-        decision = await self.brain.decide(agent, toolset, obs)
+        decision = await self.brains.for_agent(agent).decide(agent, toolset, obs)
         clock.advance(_THINK_LATENCY)
         chat.set(GenAI.USAGE_INPUT_TOKENS, decision.input_tokens)
         chat.set(GenAI.USAGE_OUTPUT_TOKENS, decision.output_tokens)
