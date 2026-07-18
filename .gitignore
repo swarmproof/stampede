@@ -223,3 +223,10 @@ __marimo__/
 stampede-report.html
 .env
 .venv/
+
+# stampede run artifacts
+/stampede.yaml
+stampede-report.html
+stampede-run.db
+*.stampede.db
+report*.json

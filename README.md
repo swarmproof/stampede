@@ -20,11 +20,21 @@ stampede generates a *population* of heterogeneous, stateful, realistically-flaw
 ## Quickstart
 
 ```bash
-pip install stampede
-stampede init                       # writes a starter stampede.yaml
+# from source (v0.1 — not yet on PyPI):
+git clone https://github.com/swarmproof/stampede && cd stampede
+python -m venv .venv && .venv/bin/pip install -e .
+
+stampede init                       # writes a starter stampede.yaml (targets a mock world)
+stampede run --dry-run              # zero-LLM, deterministic — watch the misuse map appear
+# report at ./stampede-report.html
+
+# against your own MCP server, and live (needs the extras + a model):
 stampede run --target "python my_server.py" --size 200 --live
-# open http://localhost:8080 to watch the swarm; report at ./stampede-report.html
 ```
+
+`--dry-run` needs no API keys and no network: it runs the deterministic heuristic
+swarm so you see the report shape in seconds. Drop it (and set real `models:`) for a
+live run. See [`examples/`](./examples) for MCP / HTTP / mock walkthroughs.
 
 ## The signature artifacts
 

@@ -1,0 +1,24 @@
+# Point stampede at a real MCP server over stdio.
+# Run: stampede run --config examples/mcp_stdio.yaml --dry-run
+target:
+  type: mcp
+  transport: stdio
+  command: "python examples/echo_server.py"
+
+population:
+  size: 50
+  mix: { naive: 0.6, expert: 0.3, adversarial: 0.1 }
+  models: [dry-run:heuristic]   # swap for anthropic:claude-haiku / ollama:llama3 for a live run
+
+goals:
+  autogenerate: true
+  mode: template
+
+concurrency: { curve: ramp, peak: 50, hold: 30s }
+
+chaos:
+  kill_agents_at: [random]
+  inject: [tool_timeout, rate_limit]
+  assert_recovery: true
+
+seed: 42
