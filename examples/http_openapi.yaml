@@ -1,0 +1,26 @@
+# Point stampede at your own HTTP service that exposes an OpenAPI spec.
+# NOTE: --dry-run stubs only the LLM brain; the HTTP target is still hit for real,
+# so this needs your service running locally (localhost is allowlisted by default).
+# Run: (start your service on :8000, then)
+#   stampede run --config examples/http_openapi.yaml --dry-run
+target:
+  type: http
+  url: "http://localhost:8000"
+  spec: "http://localhost:8000/openapi.json"   # or a local path to an openapi.json
+
+population:
+  size: 30
+  mix: { naive: 0.6, expert: 0.4 }
+  models: [dry-run:heuristic]
+
+goals:
+  autogenerate: true
+  mode: template
+
+concurrency: { curve: spike, peak: 30, hold: 10s }
+
+chaos:
+  inject: [latency, rate_limit]
+  rate: 0.2
+
+seed: 42
