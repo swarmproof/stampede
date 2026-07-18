@@ -17,6 +17,7 @@ import contextlib
 import random
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from stampede.chaos.injector import ChaosAction, ChaosPolicy, FaultKind
 from stampede.chaos.recovery import RecoveryAssertion, RecoveryReport
@@ -30,6 +31,9 @@ from stampede.targets.base import AgentContext, IsolationMode, TargetAdapter, To
 from stampede.targets.safety import SafetyPosture
 from stampede.trace.schema import GenAI, SpanKind, SpanSide, Swarmproof
 from stampede.trace.tracer import Tracer
+
+if TYPE_CHECKING:
+    from stampede.observer.live import LiveHub
 
 _THINK_LATENCY = 20  # virtual ticks for a planning/chat turn
 _TIMEOUT_LATENCY = 30_000  # a timeout looks like a very slow call
@@ -76,11 +80,13 @@ class Orchestrator:
         chaos: ChaosPolicy,
         budget_usd: float = 5.0,
         executor: Executor | None = None,
+        hub: LiveHub | None = None,
     ) -> None:
         self.target = target
         self.tracer = tracer
         self.brains = brains
         self.chaos = chaos
+        self.hub = hub
         self.executor = executor or AsyncioExecutor()
         self.budget = _BudgetGuard(budget_usd)
         self.recovery_assert = RecoveryAssertion()
@@ -178,6 +184,7 @@ class Orchestrator:
     async def _drive(self, agent, toolset, session, clock, chaos_rng, isolation_key) -> None:
         temp = agent.persona.temperament
         agent.sm.transition(AgentState.PLANNING)
+        self._publish(agent)  # dot appears in the swarm, PLANNING
 
         # One decision (the tool choice) — the chat turn.
         obs = Observation(turn=0)
@@ -203,6 +210,8 @@ class Orchestrator:
         # Misuse (ADR-5): labeled goal + realized tool ≠ expected tool.
         if agent.goal.labeled and decision.tool != agent.goal.intent.expected_tool:
             agent.misuse = True
+        # The "why did you call X?" moment — stream the chosen tool + reasoning.
+        self._publish(agent, tool=decision.tool, reasoning=decision.reasoning)
 
         if decision.tool is None or decision.give_up:
             agent.sm.transition(AgentState.FAILED)
@@ -255,6 +264,7 @@ class Orchestrator:
                 self._bump("agent_kill")
                 self._emit_kill_span(session, clock, agent)
                 agent.sm.kill()  # → RECOVERING
+                self._publish(agent)  # dot turns to RECOVERING
                 if not self.chaos.assert_recovery:
                     agent.sm.transition(AgentState.FAILED)
                     break
@@ -367,6 +377,7 @@ class Orchestrator:
         session.set(Swarmproof.COST_USD, round(agent.memory.cost_usd, 6))
         status = "OK" if agent.sm.state is AgentState.DONE else "ERROR"
         self.tracer.end(session, status=status, message=reason, end_tick=clock.now())
+        self._publish(agent, cost_usd=round(agent.memory.cost_usd, 6))  # terminal state
 
     async def _account(self, agent: Agent, in_tokens: int, out_tokens: int, cost: float) -> None:
         agent.memory.input_tokens += in_tokens
@@ -376,3 +387,14 @@ class Orchestrator:
 
     def _bump(self, name: str) -> None:
         self._faults[name] = self._faults.get(name, 0) + 1
+
+    def _publish(self, agent: Agent, **extra: object) -> None:
+        """Emit an agent-state event to the live dashboard, if one is attached.
+
+        Lazy import avoids an orchestrator↔observer import cycle; this is purely
+        observational and never changes span content (determinism is unaffected)."""
+        if self.hub is None:
+            return
+        from stampede.observer.live import agent_event
+
+        self.hub.publish(agent_event(agent, **extra))
