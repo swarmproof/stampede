@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Fast, blocking gates (TEST-PLAN §6) — all zero-LLM and deterministic.
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Lint (ruff)
+        run: ruff check src tests
+      - name: Type-check (mypy)
+        run: mypy src/stampede
+      - name: Unit + integration + e2e (zero-LLM)
+        run: pytest -q --cov=stampede --cov-report=term-missing
+
+  # The deterministic dry-run smoke gate — proves the one-command run + the
+  # --fail-under CI flag, end to end, on a clean checkout (TEST-PLAN §4.3).
+  dry-run-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: init + run --dry-run + fail-under
+        run: |
+          stampede init
+          stampede run --dry-run --json report-a.json --fail-under C
+          stampede run --dry-run --json report-b.json
+      - name: Assert byte-identical reports (NFR-REPRO-01)
+        run: |
+          diff report-a.json report-b.json && echo "reports are byte-identical"
+      - name: Safety gate blocks production (must exit non-zero)
+        run: |
+          if stampede run --dry-run --target https://api.acme-prod.com; then
+            echo "ERROR: safety gate failed to block" && exit 1
+          else
+            echo "safety gate blocked as expected"
+          fi

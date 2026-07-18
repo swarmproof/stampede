@@ -1,0 +1,117 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stampede"
+version = "0.1.0"
+description = "The wind tunnel for the agent economy — point a herd of realistic (and adversarial) agents at your MCP server, API, or protocol before real ones arrive."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Swarm Proof" }]
+keywords = [
+    "agents", "mcp", "llm", "reliability", "load-testing",
+    "simulation", "chaos-engineering", "opentelemetry",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+# Core stays intentionally light so `pip install stampede` + `--dry-run` works
+# in < 5 min with zero network/LLM (NFR-DX-01, constraint C3). Heavy integrations
+# live in extras below.
+dependencies = [
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "rich>=13.7",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+# Providers for live (non-dry-run) swarms — provider-agnostic (NFR-DX-02).
+providers = ["anthropic>=0.40", "openai>=1.40"]
+# MCPTarget over stdio + Streamable HTTP. Pin to the stable 1.x line; the 2.0
+# beta reshapes the client façade, and `meta=` on call_tool (used to inject the
+# W3C traceparent into MCP `_meta`) is stable from ~1.27.
+mcp = ["mcp>=1.27,<2"]
+# OTLP export of the trace-format to any OTel backend (FR-OB-05, NFR-INTEROP-01).
+otel = [
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-otlp-proto-http>=1.27",
+]
+# The watchable live dashboard (FR-OB-03).
+dashboard = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "websockets>=12"]
+# v0.2 EVMTarget (open-Gauntlet).
+evm = ["web3>=6.15"]
+# v0.2 distributed backend.
+ray = ["ray>=2.9"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "httpx>=0.27",
+]
+all = [
+    "stampede[providers,mcp,otel,dashboard]",
+]
+
+[project.scripts]
+stampede = "stampede.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/swarmproof/stampede"
+Repository = "https://github.com/swarmproof/stampede"
+Issues = "https://github.com/swarmproof/stampede/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stampede"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra"
+# In-memory SQLite trace stores are caller-owned; GC of the connection is benign.
+filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
+
+[tool.coverage.run]
+source = ["stampede"]
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "\\.\\.\\.",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "ASYNC"]
+ignore = ["E501"]  # line length handled by formatter; long strings in reports are fine
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["stampede"]
+plugins = ["pydantic.mypy"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
