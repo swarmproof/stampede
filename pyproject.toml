@@ -115,3 +115,13 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
+
+# The live provider layer duck-types across optional third-party SDKs
+# (openai/anthropic) whose responses are large discriminated unions of content
+# blocks; we read them via getattr and normalize to our own Completion type. That
+# boundary can't be cleanly narrowed, and the errors only appear when the SDKs are
+# installed. Scope the union/arg-type noise to this one module; the rest stays strict.
+[[tool.mypy.overrides]]
+module = "stampede.population.providers"
+disable_error_code = ["union-attr", "arg-type"]
+warn_unused_ignores = false

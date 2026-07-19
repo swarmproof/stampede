@@ -168,10 +168,17 @@ def build_provider(provider: str):
     raise ValueError(f"no live provider for {provider!r} (use --dry-run for zero-LLM runs)")
 
 
-def _loads(s: str) -> dict:
+def _loads(s: object) -> dict:
+    # OpenAI returns tool arguments as a JSON string; some OpenAI-compatible
+    # servers (e.g. Ollama) may hand back an already-parsed object.
     import json
 
+    if isinstance(s, dict):
+        return s
+    if not s:
+        return {}
     try:
-        return json.loads(s) if s else {}
-    except json.JSONDecodeError:
+        parsed = json.loads(s)
+        return parsed if isinstance(parsed, dict) else {}
+    except (json.JSONDecodeError, TypeError):
         return {}

@@ -45,16 +45,31 @@ pip install -e ".[dev]"                            # brings in httpx
 stampede run --config examples/http_openapi.yaml --dry-run
 ```
 
-## Going live
+## Going live (local, free) — Ollama
 
-Drop `--dry-run` and set real models in the config (or keep the mix and let
-`_select_brain` pick the provider from the first model):
+Drive a real swarm with a local Ollama model, no keys, no cost:
+
+```bash
+ollama pull llama3.1                       # a tool-capable model
+pip install -e ".[providers]"              # the openai client (used for Ollama's /v1)
+stampede run --config examples/ollama_live.yaml   # NOTE: no --dry-run → real model calls
+```
+
+Each `ollama:*` agent asks the model to pick a tool for its goal; the `BrainPool`
+routes per agent, so you can **mix** live and heuristic agents in one swarm:
 
 ```yaml
 population:
-  models: [anthropic:claude-haiku, ollama:llama3]   # provider-agnostic
+  models: [ollama:llama3.1, dry-run:heuristic]   # some real, some free/instant
+```
+
+## Going live — hosted providers
+
+```yaml
+population:
+  models: [anthropic:claude-haiku, ollama:llama3.1]   # provider-agnostic
 report:
-  budget_usd: 2.00                                   # hard pre-spend cap
+  budget_usd: 2.00                                     # hard pre-spend cap
 ```
 
 Then estimate before you spend:

@@ -1,0 +1,39 @@
+# A LIVE swarm driven by a local Ollama model — no API keys, no cost.
+#
+# Prereqs:
+#   1. Install Ollama and start it (serves an OpenAI-compatible API on :11434).
+#   2. Pull a tool-capable model:   ollama pull llama3.1
+#   3. pip install -e ".[providers]"   (brings in the openai client used for /v1)
+#
+# Run LIVE (note: NO --dry-run — real model calls decide each agent's tool):
+#   stampede run --config examples/ollama_live.yaml
+#
+# Model mixing works: keep some agents on dry-run:heuristic (free, instant) and
+# some on ollama for a cheap-but-real swarm.
+target:
+  type: mock
+  world: crm
+
+population:
+  size: 12                      # keep small for a first live run
+  mix: { naive: 0.6, expert: 0.4 }
+  models:
+    - ollama:llama3.1           # real local model — must be pulled first
+    # - ollama:qwen2.5          # any tool-capable Ollama model works
+    # - dry-run:heuristic       # mix in free heuristic agents if you like
+
+goals:
+  autogenerate: true
+  mode: template
+
+concurrency: { curve: steady, peak: 4, hold: 0 }   # low concurrency — local models are slow
+
+chaos:
+  inject: [tool_timeout]
+  rate: 0.1
+
+report:
+  budget_usd: 0.00              # Ollama is free; the cap is a no-op here
+  live: false
+
+seed: 42

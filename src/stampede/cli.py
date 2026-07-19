@@ -91,46 +91,48 @@ def run(
     if out:
         cfg.report.out = out
 
+    def emit(result) -> int:
+        """Render + persist the report; return the --fail-under exit code."""
+        render_terminal(result.report)
+        html_path = Path(cfg.report.out)
+        html_path.write_text(render_html(result.report))
+        console.print(f"\n[green]report →[/green] {html_path}")
+        if json_out:
+            Path(json_out).write_text(json.dumps(result.report.to_dict(), indent=2, sort_keys=True))
+            console.print(f"[green]json   →[/green] {json_out}")
+        if otlp:
+            from stampede.observer.export import export_otlp
+
+            http_code = export_otlp(result.store.all_spans(), otlp)
+            console.print(f"[green]otlp   →[/green] {otlp} (HTTP {http_code})")
+        if result.outcome.stopped_early:
+            console.print(f"[yellow]run stopped early: {result.outcome.reason}[/yellow]")
+        if fail_under:
+            want = fail_under.strip().upper()
+            if _GRADE_RANK.get(result.report.grade, 0) < _GRADE_RANK.get(want, 0):
+                console.print(f"[red]grade {result.report.grade} is below --fail-under {want}[/red]")
+                return 1
+        return 0
+
+    exit_state = {"code": 0}
     try:
-        result = asyncio.run(run_simulation(cfg, dry_run=dry_run))
+        if live:
+            # Run the swarm and the watchable dashboard concurrently; report when
+            # the run finishes, then hold the dashboard open until Ctrl-C.
+            from stampede.run import serve_live
+
+            def on_report(result) -> None:
+                exit_state["code"] = emit(result)
+
+            asyncio.run(serve_live(cfg, dry_run=dry_run, on_report=on_report))
+        else:
+            result = asyncio.run(run_simulation(cfg, dry_run=dry_run))
+            exit_state["code"] = emit(result)
     except SafetyViolation as exc:
         console.print(f"\n[red bold]Safety Gate blocked this run.[/red bold]\n{exc}\n")
         raise typer.Exit(2) from exc
 
-    render_terminal(result.report)
-
-    html_path = Path(cfg.report.out)
-    html_path.write_text(render_html(result.report))
-    console.print(f"\n[green]report →[/green] {html_path}")
-
-    if json_out:
-        Path(json_out).write_text(json.dumps(result.report.to_dict(), indent=2, sort_keys=True))
-        console.print(f"[green]json   →[/green] {json_out}")
-
-    if otlp:
-        from stampede.observer.export import export_otlp
-
-        code = export_otlp(result.store.all_spans(), otlp)
-        console.print(f"[green]otlp   →[/green] {otlp} (HTTP {code})")
-
-    if result.outcome.stopped_early:
-        console.print(f"[yellow]run stopped early: {result.outcome.reason}[/yellow]")
-
-    exit_code = 0
-    if fail_under:
-        want = fail_under.strip().upper()
-        if _GRADE_RANK.get(result.report.grade, 0) < _GRADE_RANK.get(want, 0):
-            console.print(
-                f"[red]grade {result.report.grade} is below --fail-under {want}[/red]"
-            )
-            exit_code = 1
-
-    if live:
-        from stampede.observer.dashboard import serve
-
-        serve(result.store, meta=f"{result.report.target} · grade {result.report.grade}")
-
-    raise typer.Exit(exit_code)
+    raise typer.Exit(exit_state["code"])
 
 
 @app.command()
