@@ -155,6 +155,49 @@ def plan(
         console.print(f"    {persona:<14} ${usd}")
 
 
+@app.command()
+def diff(
+    baseline: str = typer.Argument(..., help="baseline report JSON (stampede run --json …)"),
+    candidate: str = typer.Argument(..., help="candidate report JSON to compare"),
+    alpha: float = typer.Option(0.05, "--alpha", help="significance threshold"),
+    min_effect: float = typer.Option(0.10, "--min-effect", help="minimum flagged effect size"),
+    fail_on_regression: bool = typer.Option(
+        True, "--fail-on-regression/--no-fail", help="exit nonzero on a significant regression"
+    ),
+) -> None:
+    """Compare two run reports; flag only *significant* regressions, not RNG noise (FR-OB-06)."""
+    from rich.table import Table
+
+    from stampede.observer.diff import diff_reports
+
+    b = json.loads(Path(baseline).read_text())
+    c = json.loads(Path(candidate).read_text())
+    report = diff_reports(b, c, alpha=alpha, min_effect=min_effect)
+
+    console.print(
+        f"[bold]stampede diff[/bold] — {report.baseline_run} → {report.candidate_run}  "
+        f"(grade {report.grade_baseline} → {report.grade_candidate}, α={alpha}, min-effect={min_effect})"
+    )
+    table = Table(header_style="dim")
+    for col in ("persona", "metric", "baseline", "candidate", "Δ", "p", "verdict"):
+        table.add_column(col, justify="right" if col not in {"persona", "metric", "verdict"} else "left")
+    for f in report.findings:
+        color = {"REGRESSION": "red", "improved": "green"}.get(f.verdict, "dim")
+        table.add_row(
+            f.persona, f.metric, f"{f.baseline:.0%}", f"{f.candidate:.0%}",
+            f"{f.delta:+.0%}", f"{f.p_value:.3f}", f"[{color}]{f.verdict}[/{color}]",
+        )
+    console.print(table)
+
+    if report.regressed:
+        console.print(f"[red bold]{len(report.regressions)} significant regression(s)[/red bold]")
+    else:
+        console.print("[green]no significant regressions — changes are within the noise band[/green]")
+
+    if fail_on_regression and report.regressed:
+        raise typer.Exit(1)
+
+
 def main() -> None:  # module entry-point convenience
     app()
 
