@@ -9,7 +9,16 @@ export to any OTel backend over OTLP.
 
 from __future__ import annotations
 
+from stampede.observer.diff import DiffReport, diff_reports
 from stampede.observer.renderer import render_html, render_terminal
 from stampede.observer.report import RunReport, build_report, grade_for_score
 
-__all__ = ["RunReport", "build_report", "grade_for_score", "render_html", "render_terminal"]
+__all__ = [
+    "DiffReport",
+    "RunReport",
+    "build_report",
+    "diff_reports",
+    "grade_for_score",
+    "render_html",
+    "render_terminal",
+]
