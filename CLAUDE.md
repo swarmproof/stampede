@@ -16,6 +16,8 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"   # dev install
 .venv/bin/stampede run --dry-run                            # zero-LLM deterministic run → report
 .venv/bin/stampede run --dry-run --target mock:payments     # the exactly-once world
 .venv/bin/stampede plan                                     # pre-run cost estimate
+.venv/bin/stampede run --dry-run --json a.json              # save a report for diffing
+.venv/bin/stampede diff a.json b.json                       # statistical run-diff (CI regression gate)
 .venv/bin/pytest -q                                         # full suite (zero-LLM, deterministic)
 .venv/bin/pytest tests/test_e2e.py -q                       # DoD e2e scenarios only
 .venv/bin/pytest -q -k determinism                          # a single test by keyword
