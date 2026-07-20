@@ -18,6 +18,7 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"   # dev install
 .venv/bin/stampede plan                                     # pre-run cost estimate
 .venv/bin/stampede run --dry-run --json a.json              # save a report for diffing
 .venv/bin/stampede diff a.json b.json                       # statistical run-diff (CI regression gate)
+.venv/bin/stampede run --dry-run --badge b.svg --summary s.json  # Agent Ready badge + JSON summary
 .venv/bin/pytest -q                                         # full suite (zero-LLM, deterministic)
 .venv/bin/pytest tests/test_e2e.py -q                       # DoD e2e scenarios only
 .venv/bin/pytest -q -k determinism                          # a single test by keyword

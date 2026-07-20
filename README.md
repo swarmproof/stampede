@@ -41,6 +41,7 @@ live run. See [`examples/`](./examples) for MCP / HTTP / mock walkthroughs.
 - **Persona packs** — versioned YAML defining agent *temperaments*, not just models: `naive`, `expert`, `impatient`, `frugal`, `adversarial`, `drunk`. Community-contributable.
 - **The Agent Readiness Report** — the screenshotable deliverable: task-success by persona, the **misuse map** ("34% of agents called `delete_record` when they meant `archive_record`"), swarm concurrency (p95/p99), the **cost profile**, and adversarial findings.
 - **The watchable world** — a live local dashboard where you *see* the swarm hit your system and click any agent to ask "why did you call that tool?"
+- **The Agent Ready badge** — drop `--badge agent-ready.svg` (or `--summary summary.json`) on any run and put the grade in your README, the way web teams post a Lighthouse score. Pair it with `stampede diff` for a CI gate that flags real regressions, not RNG noise.
 
 See [`SPEC.md`](./SPEC.md) for the full design and [`ROADMAP.md`](./ROADMAP.md) for what ships when.
 
