@@ -36,6 +36,7 @@ class Persona(BaseModel):
     attacks: list[str] = Field(default_factory=list)  # e.g. ["injection", "denial_of_wallet"]
     prompt_template: str = ""
     pack: str = "core@1.0"  # provenance → swarmproof.persona.pack
+    calibration: Calibration = Field(default_factory=Calibration)  # per-persona grounding (FR-PF-06)
 
     @property
     def is_adversarial(self) -> bool:

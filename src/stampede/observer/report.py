@@ -89,6 +89,7 @@ class RunReport:
     adversarial: dict[str, Any] = field(default_factory=dict)
     grade: str = "F"
     overall_score: float = 0.0
+    realism: dict[str, Any] | None = None  # ⊕ FR-OB-07, set when grounded_against is used
 
     # ---- deterministic serialization ----
 
@@ -138,6 +139,7 @@ class RunReport:
             "cost_spread": round(self.cost_spread, 2),
             "chaos": self.chaos,
             "adversarial": self.adversarial,
+            **({"realism": self.realism} if self.realism is not None else {}),
         }
 
 
