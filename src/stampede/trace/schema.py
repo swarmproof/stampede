@@ -73,9 +73,21 @@ class SpanSide(StrEnum):
     TARGET = "target"
 
 
-# Secret-bearing attribute keys / value patterns are redacted before store/export
-# (NFR-SEC-02). Kept here so the redactor and tracer share one source of truth.
-REDACT_KEYS = ("api_key", "authorization", "rpc_url", "secret", "token", "password")
+# Secret-bearing attribute keys are redacted before store/export (NFR-SEC-02).
+# Precise markers only: bare "token" would wrongly redact `gen_ai.usage.*_tokens`
+# (which are counts, not secrets), so we match auth-token forms explicitly.
+REDACT_KEYS = (
+    "api_key",
+    "apikey",
+    "authorization",
+    "secret",
+    "password",
+    "rpc_url",
+    "access_token",
+    "refresh_token",
+    "bearer",
+    "private_key",
+)
 REDACT_PLACEHOLDER = "«redacted»"
 
 
