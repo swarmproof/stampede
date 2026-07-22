@@ -9,6 +9,7 @@ export to any OTel backend over OTLP.
 
 from __future__ import annotations
 
+from stampede.observer.badge import shields_endpoint, summary, svg_badge
 from stampede.observer.diff import DiffReport, diff_reports
 from stampede.observer.renderer import render_html, render_terminal
 from stampede.observer.report import RunReport, build_report, grade_for_score
@@ -21,4 +22,7 @@ __all__ = [
     "grade_for_score",
     "render_html",
     "render_terminal",
+    "shields_endpoint",
+    "summary",
+    "svg_badge",
 ]

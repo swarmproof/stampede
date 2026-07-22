@@ -76,6 +76,8 @@ def run(
     out: str = typer.Option(None, "--out", help="HTML report path (overrides config)"),
     json_out: str = typer.Option(None, "--json", help="also write the report as JSON"),
     otlp: str = typer.Option(None, "--otlp", help="export traces to an OTLP/HTTP endpoint"),
+    badge: str = typer.Option(None, "--badge", help="write an Agent Ready SVG badge to this path"),
+    summary_out: str = typer.Option(None, "--summary", help="write a machine-readable JSON summary"),
     fail_under: str = typer.Option(None, "--fail-under", help="exit nonzero below this grade (A-F)"),
 ) -> None:
     """Run a swarm against the target and produce the Agent Readiness Report (FR-CLI-02)."""
@@ -105,6 +107,16 @@ def run(
 
             http_code = export_otlp(result.store.all_spans(), otlp)
             console.print(f"[green]otlp   →[/green] {otlp} (HTTP {http_code})")
+        if badge:
+            from stampede.observer.badge import svg_badge
+
+            Path(badge).write_text(svg_badge(result.report))
+            console.print(f"[green]badge  →[/green] {badge}  (grade {result.report.grade})")
+        if summary_out:
+            from stampede.observer.badge import summary as badge_summary
+
+            Path(summary_out).write_text(json.dumps(badge_summary(result.report), indent=2, sort_keys=True))
+            console.print(f"[green]summary→[/green] {summary_out}")
         if result.outcome.stopped_early:
             console.print(f"[yellow]run stopped early: {result.outcome.reason}[/yellow]")
         if fail_under:
