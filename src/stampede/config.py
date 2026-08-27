@@ -84,6 +84,7 @@ class ChaosConfig(BaseModel):
     inject: list[str] = Field(default_factory=list)  # tool_timeout, malformed_output, ...
     rate: float = 0.15  # probability a given eligible invoke is faulted
     assert_recovery: bool = False
+    incident: str | None = None  # ⊕ FR-CH-05: replay an agent-postmortems incident YAML
 
 
 class SafetyConfig(BaseModel):

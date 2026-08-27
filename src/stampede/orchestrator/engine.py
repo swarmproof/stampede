@@ -48,6 +48,7 @@ class RunOutcome:
     stopped_early: bool = False
     reason: str = ""
     faults_injected: dict[str, int] = field(default_factory=dict)
+    incident: dict[str, str] | None = None  # set when replaying an incident (FR-CH-05)
 
 
 class _BudgetGuard:
@@ -135,6 +136,7 @@ class Orchestrator:
             stopped_early=stopped,
             reason="budget_exhausted" if stopped else "",
             faults_injected=dict(self._faults),
+            incident=self.chaos.incident,
         )
 
     # ---- per-agent lifecycle ----

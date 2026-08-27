@@ -90,11 +90,16 @@ async def run_simulation(
     # 5. Orchestrate under chaos. The BrainPool routes each agent to a brain by its
     # model binding — dry-run/heuristic agents stay deterministic; live-model agents
     # (e.g. ollama:llama3) drive the real provider (FR-PF-04 model mixing).
+    chaos_policy = ChaosPolicy(config.chaos)
+    if config.chaos.incident:  # replay a real incident instead of random chaos (FR-CH-05)
+        from stampede.chaos.incident import Incident
+
+        chaos_policy.apply_incident(Incident.load(config.chaos.incident))
     orch = Orchestrator(
         target=target,
         tracer=tracer,
         brains=BrainPool(dry_run=dry_run),
-        chaos=ChaosPolicy(config.chaos),
+        chaos=chaos_policy,
         budget_usd=config.report.budget_usd,
         hub=hub,
     )

@@ -244,6 +244,7 @@ def build_report(
             for f in sorted(outcome.recovery.findings, key=lambda f: (f.agent_id, f.kind))
         ],
         "exactly_once_violations": len(outcome.recovery.exactly_once_violations),
+        **({"incident": outcome.incident} if outcome.incident else {}),
     }
 
     # ---- adversarial cohort ----

@@ -1,0 +1,9 @@
+# Replay examples/incident.yaml against the payments world (exactly-once under the outage).
+target: { type: mock, world: payments }
+population: { size: 60, mix: { naive: 0.6, expert: 0.4 }, models: [dry-run:heuristic] }
+concurrency: { curve: steady, peak: 30, hold: 0 }
+goals: { autogenerate: true, mode: template }
+chaos:
+  incident: examples/incident.yaml   # replay the real incident instead of random chaos
+  assert_recovery: true
+seed: 42

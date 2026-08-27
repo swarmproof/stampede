@@ -9,6 +9,7 @@ dedicated per-agent RNG so the schedule is seeded and reproducible (FR-OR-06).
 
 from __future__ import annotations
 
+from stampede.chaos.incident import Incident, IncidentFault
 from stampede.chaos.injector import ChaosAction, ChaosPolicy, FaultKind
 from stampede.chaos.recovery import ExactlyOnceLedger, RecoveryAssertion, RecoveryFinding
 
@@ -17,6 +18,8 @@ __all__ = [
     "ChaosPolicy",
     "ExactlyOnceLedger",
     "FaultKind",
+    "Incident",
+    "IncidentFault",
     "RecoveryAssertion",
     "RecoveryFinding",
 ]
