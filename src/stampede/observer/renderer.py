@@ -97,3 +97,9 @@ def render_terminal(report: RunReport) -> None:
         viol = report.chaos["exactly_once_violations"]
         tag = "[green]exactly-once holds[/green]" if viol == 0 else f"[red]{viol} violation(s)[/red]"
         console.print(f"[dim]chaos[/dim] faults={report.chaos['faults_injected']}  {tag}")
+    if report.realism is not None:
+        r = report.realism
+        console.print(
+            f"[dim]realism[/dim] [bold]{r['score']}[/bold]  "
+            f"(sim misuse {r['simulated']['misuse_rate']:.0%} vs recorded {r['recorded']['misuse_rate']:.0%})"
+        )

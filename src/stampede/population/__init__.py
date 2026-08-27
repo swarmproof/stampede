@@ -17,6 +17,11 @@ from stampede.population.agent import (
     TransitionError,
 )
 from stampede.population.factory import PopulationFactory, build_population
+from stampede.population.grounding import (
+    RecordedTraffic,
+    fit_persona,
+    realism_score,
+)
 
 __all__ = [
     "Agent",
@@ -24,7 +29,10 @@ __all__ = [
     "AgentState",
     "ModelBinding",
     "PopulationFactory",
+    "RecordedTraffic",
     "StateMachine",
     "TransitionError",
     "build_population",
+    "fit_persona",
+    "realism_score",
 ]

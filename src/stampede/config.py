@@ -48,6 +48,7 @@ class PopulationConfig(BaseModel):
     mix: dict[str, float] = Field(default_factory=lambda: {"naive": 1.0})
     models: list[str] = Field(default_factory=lambda: ["dry-run:heuristic"])
     pack: str = "core"  # persona pack name or path
+    grounded_against: str | None = None  # recording path → report a realism score (FR-OB-07)
 
     @field_validator("mix")
     @classmethod

@@ -93,6 +93,7 @@ def _build_pack(raw: dict[str, Any], source: str) -> PersonaPack:
             attacks=list(merged["attacks"]),
             prompt_template=merged["prompt_template"],
             pack=pack_ref,
+            calibration=Calibration(**(node.get("calibration") or {})),
         )
         resolved[pname] = persona
         return merged
@@ -148,3 +149,35 @@ def sample_mix(
         agents.extend([pack.get(name)] * floors[name])
     random.Random(seed).shuffle(agents)
     return agents
+
+
+def write_pack(pack: PersonaPack, path: str | Path) -> None:
+    """Serialize a (resolved) pack to swarmproof.dev/persona/v1 YAML — used by
+    ``stampede ground`` to emit a calibrated pack that ``load_pack`` reads back."""
+    personas = []
+    for name in sorted(pack.personas):
+        p = pack.personas[name]
+        entry: dict[str, Any] = {
+            "name": p.name,
+            "description": p.description,
+            "temperament": p.temperament.model_dump(),
+        }
+        if p.attacks:
+            entry["attacks"] = list(p.attacks)
+        if p.prompt_template:
+            entry["prompt_template"] = p.prompt_template
+        if p.calibration.grounded_against or p.calibration.realism_score is not None:
+            entry["calibration"] = p.calibration.model_dump()
+        personas.append(entry)
+    doc = {
+        "apiVersion": pack.api_version,
+        "kind": pack.kind,
+        "metadata": {
+            "name": pack.name,
+            "version": pack.version,
+            "description": pack.description,
+            "license": pack.license,
+        },
+        "personas": personas,
+    }
+    Path(path).write_text(yaml.safe_dump(doc, sort_keys=False, default_flow_style=False))

@@ -78,6 +78,7 @@ def run(
     otlp: str = typer.Option(None, "--otlp", help="export traces to an OTLP/HTTP endpoint"),
     badge: str = typer.Option(None, "--badge", help="write an Agent Ready SVG badge to this path"),
     summary_out: str = typer.Option(None, "--summary", help="write a machine-readable JSON summary"),
+    record: str = typer.Option(None, "--record", help="record this run's behaviour distribution (for grounding)"),
     fail_under: str = typer.Option(None, "--fail-under", help="exit nonzero below this grade (A-F)"),
 ) -> None:
     """Run a swarm against the target and produce the Agent Readiness Report (FR-CLI-02)."""
@@ -117,6 +118,14 @@ def run(
 
             Path(summary_out).write_text(json.dumps(badge_summary(result.report), indent=2, sort_keys=True))
             console.print(f"[green]summary→[/green] {summary_out}")
+        if record:
+            from stampede.population.grounding import RecordedTraffic
+
+            RecordedTraffic.from_spans(result.store.all_spans(), source=result.report.run_id).to_json(record)
+            console.print(f"[green]record →[/green] {record}")
+        if result.report.realism is not None:
+            console.print(f"[cyan]realism →[/cyan] {result.report.realism['score']} "
+                          f"(vs {result.report.realism['grounded_against']})")
         if result.outcome.stopped_early:
             console.print(f"[yellow]run stopped early: {result.outcome.reason}[/yellow]")
         if fail_under:
@@ -208,6 +217,41 @@ def diff(
 
     if fail_on_regression and report.regressed:
         raise typer.Exit(1)
+
+
+@app.command()
+def ground(
+    recorded: str = typer.Argument(..., help="a recording JSON (stampede run --record …)"),
+    pack: str = typer.Option("core", "--pack", help="persona pack to calibrate"),
+    out: str = typer.Option("grounded.yaml", "--out", help="where to write the grounded pack"),
+    personas: str = typer.Option(None, "--personas", help="comma-separated subset to fit (default: all)"),
+) -> None:
+    """Fit a persona pack's temperaments to a recorded traffic distribution (FR-PF-06)."""
+    from stampede.personas.loader import load_pack, write_pack
+    from stampede.population.grounding import RecordedTraffic, fit_persona
+
+    rec = RecordedTraffic.from_json(recorded)
+    src = load_pack(pack)
+    wanted = {n.strip() for n in personas.split(",")} if personas else set(src.personas)
+
+    fitted = {
+        name: (fit_persona(p, rec) if name in wanted else p) for name, p in src.personas.items()
+    }
+    grounded = src.model_copy(update={"personas": fitted, "name": f"{src.name}-grounded"})
+    write_pack(grounded, out)
+
+    console.print(
+        f"[bold]stampede ground[/bold] — fit {pack!r} to {recorded!r} "
+        f"(recorded misuse {rec.misuse_rate:.0%})  →  {out}"
+    )
+    for name in sorted(wanted & set(src.personas)):
+        before = src.personas[name].temperament.misread_rate
+        after = fitted[name].temperament.misread_rate
+        console.print(f"  {name:<14} misread {before:.2f} → {after:.2f}")
+    console.print(
+        f"[dim]run with[/dim] population.pack: {out}  population.grounded_against: {recorded}  "
+        "[dim]to see the realism score.[/dim]"
+    )
 
 
 def main() -> None:  # module entry-point convenience

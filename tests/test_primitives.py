@@ -37,9 +37,16 @@ def test_traceparent_format():
 def test_span_redacts_secrets():
     s = Span(name="x", trace_id="t", span_id="s")
     s.set("api_key", "sk-secret")
+    s.set("authorization", "Bearer xyz")
     s.set("gen_ai.request.model", "claude-haiku")
     assert s.attributes["api_key"] == REDACT_PLACEHOLDER
+    assert s.attributes["authorization"] == REDACT_PLACEHOLDER
     assert s.attributes["gen_ai.request.model"] == "claude-haiku"
+    # Token *counts* must NOT be redacted — "token" is not a bare secret marker.
+    s.set("gen_ai.usage.input_tokens", 1200)
+    s.set("gen_ai.usage.output_tokens", 300)
+    assert s.attributes["gen_ai.usage.input_tokens"] == 1200
+    assert s.attributes["gen_ai.usage.output_tokens"] == 300
 
 
 # ---- persona-pack ----

@@ -113,6 +113,20 @@ async def run_simulation(
 
     # 6. Aggregate the Agent Readiness Report.
     report = build_report(config=config, agents=agents, outcome=outcome, store=store, run_id=run_id)
+
+    # 6b. Realism panel (FR-OB-07): score this run against a recorded distribution.
+    if config.population.grounded_against:
+        from stampede.population.grounding import RecordedTraffic, realism_score
+
+        recorded = RecordedTraffic.from_json(config.population.grounded_against)
+        simulated = RecordedTraffic.from_report(report.to_dict(), source="simulated")
+        report.realism = {
+            "score": realism_score(simulated, recorded),
+            "recorded": recorded.__dict__,
+            "simulated": simulated.__dict__,
+            "grounded_against": config.population.grounded_against,
+        }
+
     store.commit()
     return RunResult(report=report, store=store, outcome=outcome)
 
