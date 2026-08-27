@@ -1,0 +1,19 @@
+# An agent-postmortems incident — replay a real outage against your stack (FR-CH-05).
+# Run:  stampede run --dry-run -c examples/incident_run.yaml
+apiVersion: swarmproof.dev/incident/v1
+kind: Incident
+metadata:
+  id: INC-2026-014
+  title: "Rate-limit cascade + timeouts during checkout"
+  date: 2026-06-01
+faults:
+  # A rate-limit storm hit ~40% of tool calls...
+  - kind: rate_limit
+    blast_radius: 0.40
+  # ...with a wave of upstream timeouts on ~20%...
+  - kind: tool_timeout
+    blast_radius: 0.20
+  # ...and ~15% of agents were killed at their second step (pod evictions).
+  - kind: agent_kill
+    blast_radius: 0.15
+    at_step: 1
