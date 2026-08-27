@@ -93,6 +93,9 @@ def render_terminal(report: RunReport) -> None:
         f"p99={perf['p99_ticks']}ms  dropped={perf['dropped_connections']}  "
         f"peak={perf['max_stable_concurrency']}"
     )
+    if report.chaos.get("incident"):
+        inc = report.chaos["incident"]
+        console.print(f"[dim]incident replay[/dim] {inc.get('id')} — {inc.get('title')}")
     if report.chaos.get("faults_injected"):
         viol = report.chaos["exactly_once_violations"]
         tag = "[green]exactly-once holds[/green]" if viol == 0 else f"[red]{viol} violation(s)[/red]"
