@@ -69,6 +69,7 @@ def init(
 def run(
     config: str = typer.Option("stampede.yaml", "--config", "-c"),
     target: str = typer.Option(None, "--target", "-t", help="override target (mock:crm | URL | command)"),
+    from_probe: str = typer.Option(None, "--from-probe", help="build the target from an mcp-probe descriptor JSON"),
     size: int = typer.Option(None, "--size", "-n", help="override population size"),
     budget: float = typer.Option(None, "--budget", help="hard USD cap for the run"),
     dry_run: bool = typer.Option(False, "--dry-run", help="zero-LLM deterministic run (CI)"),
@@ -82,10 +83,14 @@ def run(
     fail_under: str = typer.Option(None, "--fail-under", help="exit nonzero below this grade (A-F)"),
 ) -> None:
     """Run a swarm against the target and produce the Agent Readiness Report (FR-CLI-02)."""
-    # A target on the CLI is enough to run — no stampede.yaml required (SPEC quickstart).
-    cfg = StampedeConfig() if (target and not Path(config).exists()) else _load(config)
+    # A target on the CLI (or a probe descriptor) is enough to run — no yaml required.
+    cfg = StampedeConfig() if ((target or from_probe) and not Path(config).exists()) else _load(config)
     if target:
         _apply_target_override(cfg, target)
+    if from_probe:  # mcp-probe descriptor → MCPTarget config (FR-CLI-07)
+        from stampede.targets.from_probe import target_config_from_probe_file
+
+        cfg.target = target_config_from_probe_file(from_probe)
     if size:
         cfg.population.size = size
         cfg.concurrency.peak = min(cfg.concurrency.peak or size, size)
