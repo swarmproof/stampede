@@ -9,7 +9,8 @@ the six canonical temperaments ship in ``packs/core.yaml``.
 
 from __future__ import annotations
 
-from stampede.personas.loader import list_builtin_packs, load_pack, sample_mix
+from stampede.personas.loader import list_builtin_packs, load_pack, sample_mix, write_pack
+from stampede.personas.registry import add_pack, list_installed, registry_dir
 from stampede.personas.schema import Calibration, Persona, PersonaPack, Temperament
 
 __all__ = [
@@ -17,7 +18,11 @@ __all__ = [
     "Persona",
     "PersonaPack",
     "Temperament",
+    "add_pack",
     "list_builtin_packs",
+    "list_installed",
     "load_pack",
+    "registry_dir",
     "sample_mix",
+    "write_pack",
 ]
