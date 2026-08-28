@@ -1,0 +1,10 @@
+{
+  "apiVersion": "swarmproof.dev/probe/v1",
+  "server": { "name": "echo-crm", "version": "0.1.0" },
+  "target": { "transport": "stdio", "command": "python examples/echo_server.py" },
+  "tools": [
+    { "name": "archive_record", "description": "Remove a record from the active list (recoverable)." },
+    { "name": "delete_record", "description": "Delete a record permanently." },
+    { "name": "find_records", "description": "Search records by a query string." }
+  ]
+}
