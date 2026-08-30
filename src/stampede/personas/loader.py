@@ -23,14 +23,21 @@ def list_builtin_packs() -> list[str]:
 
 
 def load_pack(name_or_path: str) -> PersonaPack:
-    """Load a pack by builtin name (``"core"``) or by filesystem path."""
+    """Load a pack by filesystem path, builtin name (``"core"``), or an installed
+    registry name (``stampede persona add``). Resolution: path → builtin → registry."""
     path = Path(name_or_path)
     if not path.exists():
         path = _PACKS_DIR / f"{name_or_path}.yaml"
     if not path.exists():
+        # Lazy import avoids a loader↔registry import cycle.
+        from stampede.personas.registry import registry_dir
+
+        path = registry_dir() / f"{name_or_path}.yaml"
+    if not path.exists():
         raise FileNotFoundError(
             f"persona pack {name_or_path!r} not found "
-            f"(builtins: {', '.join(list_builtin_packs())})"
+            f"(builtins: {', '.join(list_builtin_packs())}; "
+            "install more with `stampede persona add <path|url>`)"
         )
     raw = yaml.safe_load(path.read_text()) or {}
     return _build_pack(raw, source=str(path))

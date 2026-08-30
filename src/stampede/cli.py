@@ -259,6 +259,74 @@ def ground(
     )
 
 
+persona_app = typer.Typer(no_args_is_help=True, help="Manage persona packs (FR-PF-07).")
+app.add_typer(persona_app, name="persona")
+
+
+@persona_app.command("list")
+def persona_list() -> None:
+    """List built-in and installed persona packs."""
+    from stampede.personas.loader import list_builtin_packs, load_pack
+    from stampede.personas.registry import list_installed, registry_dir
+
+    console.print("[bold]built-in[/bold]")
+    for name in list_builtin_packs():
+        pack = load_pack(name)
+        console.print(f"  {name:<16} v{pack.version}  ({len(pack.personas)} personas)")
+    installed = list_installed()
+    console.print(f"[bold]installed[/bold] [dim]({registry_dir()})[/dim]")
+    if not installed:
+        console.print("  [dim]none — add one with `stampede persona add <path|url>`[/dim]")
+    for p in installed:
+        console.print(f"  {p.name:<16} v{p.version}")
+
+
+@persona_app.command("add")
+def persona_add(
+    source: str = typer.Argument(..., help="a persona-pack YAML — local path or http(s) URL"),
+) -> None:
+    """Install a persona pack into the local registry (validated before install)."""
+    from stampede.personas.registry import add_pack
+
+    try:
+        installed = add_pack(source)
+    except Exception as exc:
+        console.print(f"[red]could not add pack:[/red] {exc}")
+        raise typer.Exit(1) from exc
+    console.print(
+        f"[green]installed[/green] {installed.name} v{installed.version} → {installed.path}\n"
+        f"[dim]use it with[/dim] population.pack: {installed.name}"
+    )
+
+
+@persona_app.command("show")
+def persona_show(
+    name: str = typer.Argument(..., help="pack name (builtin/installed) or path"),
+) -> None:
+    """Show a pack's personas and their temperaments."""
+    from rich.table import Table
+
+    from stampede.personas.loader import load_pack
+
+    try:
+        pack = load_pack(name)
+    except Exception as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    console.print(f"[bold]{pack.name}[/bold] v{pack.version} — {pack.description}")
+    table = Table(header_style="dim")
+    for col in ("persona", "misread", "adherence", "patience", "retry", "attacks"):
+        table.add_column(col, justify="left" if col in {"persona", "retry", "attacks"} else "right")
+    for pname in sorted(pack.personas):
+        p = pack.personas[pname]
+        t = p.temperament
+        table.add_row(
+            pname, f"{t.misread_rate:.2f}", f"{t.goal_adherence:.2f}", str(t.patience),
+            t.retry_policy, ",".join(p.attacks) or "—",
+        )
+    console.print(table)
+
+
 def main() -> None:  # module entry-point convenience
     app()
 
