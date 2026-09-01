@@ -18,6 +18,17 @@ tracer.end(span)
 
 Dependency-free (stdlib only). Span IDs are deterministic in `(seed, counter)` so seeded runs are byte-reproducible.
 
-The persona-pack, report-renderer, and concurrency-core primitives follow here as they stabilize.
+## concurrency-core
+
+Virtual-time clocks, concurrency curves, and a pluggable `Executor` — the swarm scheduler `stampede`'s orchestrator and `mcp-probe`'s load engine both run on.
+
+```python
+from agent_reliability_core.concurrency import SimClock, schedule_offsets, AsyncioExecutor
+
+offsets = schedule_offsets(size=200, curve="ramp", peak=200, hold=30)   # arrival schedule
+results = await AsyncioExecutor().run(factories, concurrency=200)        # capped, failure-isolated
+```
+
+The persona-pack and report-renderer primitives follow here as they stabilize.
 
 [Apache-2.0](../LICENSE)
