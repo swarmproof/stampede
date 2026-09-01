@@ -44,7 +44,7 @@ Optional extras: `.[mcp]` (real MCP servers), `.[otel]` (OTLP export), `.[dashbo
 | `targets/` | Target Adapters (`mock`, `http`, `mcp`) + `base` protocol + `safety` gate |
 | `goals/` | Goal Synthesis — template (deterministic) mode + the intent/misuse oracle |
 | `population/` | Population Factory, `Agent` + six-state machine, `brain` (heuristic + LLM), `providers` + cost model |
-| `orchestrator/` | concurrency-core — `SimClock`, curves, `scheduler`, and `engine` (the run loop) |
+| `orchestrator/` | the run loop (`engine`). The concurrency-core primitive (`SimClock`, curves, `scheduler`) is **extracted** to `agent_reliability_core.concurrency` (ADR-4) — import from there. |
 | `chaos/` | fault `injector` + `recovery` (exactly-once) |
 | `observer/` | `report` aggregation, `renderer` (HTML/terminal), `dashboard`, `export` |
 | `run.py` | wires the whole pipeline; `cli.py` | the `init`/`run`/`plan` CLI |

@@ -19,14 +19,14 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from agent_reliability_core.concurrency.clock import AgentClock
+from agent_reliability_core.concurrency.curves import schedule_offsets
+from agent_reliability_core.concurrency.scheduler import AsyncioExecutor, Executor
 from agent_reliability_core.trace.schema import GenAI, SpanKind, SpanSide, Swarmproof
 from agent_reliability_core.trace.tracer import Tracer
 
 from stampede.chaos.injector import ChaosAction, ChaosPolicy, FaultKind
 from stampede.chaos.recovery import RecoveryAssertion, RecoveryReport
-from stampede.orchestrator.clock import AgentClock
-from stampede.orchestrator.curves import schedule_offsets
-from stampede.orchestrator.scheduler import AsyncioExecutor, Executor
 from stampede.population.agent import Agent, AgentState
 from stampede.population.brain import BrainPool, Observation
 from stampede.population.providers import cost_usd
