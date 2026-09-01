@@ -19,6 +19,9 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from agent_reliability_core.trace.schema import GenAI, SpanKind, SpanSide, Swarmproof
+from agent_reliability_core.trace.tracer import Tracer
+
 from stampede.chaos.injector import ChaosAction, ChaosPolicy, FaultKind
 from stampede.chaos.recovery import RecoveryAssertion, RecoveryReport
 from stampede.orchestrator.clock import AgentClock
@@ -29,8 +32,6 @@ from stampede.population.brain import BrainPool, Observation
 from stampede.population.providers import cost_usd
 from stampede.targets.base import AgentContext, IsolationMode, TargetAdapter, ToolCall, ToolSet
 from stampede.targets.safety import SafetyPosture
-from stampede.trace.schema import GenAI, SpanKind, SpanSide, Swarmproof
-from stampede.trace.tracer import Tracer
 
 if TYPE_CHECKING:
     from stampede.observer.live import LiveHub

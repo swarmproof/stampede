@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-reliability-core"
+version = "0.1.0"
+description = "Shared primitives for the Swarm Proof agent-reliability toolkit — the OTel GenAI trace-format, and (soon) persona-pack, report-renderer, and concurrency-core."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "Swarm Proof" }]
+keywords = ["opentelemetry", "gen-ai", "agents", "reliability", "trace-format"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Testing",
+]
+# The trace-format primitive is stdlib-only by design — zero runtime deps.
+dependencies = []
+
+[project.optional-dependencies]
+# OTLP export helpers (the wire format itself needs nothing).
+otel = ["opentelemetry-api>=1.27", "opentelemetry-sdk>=1.27"]
+
+[project.urls]
+Homepage = "https://github.com/swarmproof/agent-reliability-core"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_reliability_core"]

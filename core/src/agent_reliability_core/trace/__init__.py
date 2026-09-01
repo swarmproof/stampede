@@ -11,7 +11,7 @@ adapter under the ``[otel]`` extra (``export``).
 
 from __future__ import annotations
 
-from stampede.trace.schema import (
+from agent_reliability_core.trace.schema import (
     GenAI,
     Span,
     SpanKind,
@@ -19,9 +19,10 @@ from stampede.trace.schema import (
     Swarmproof,
     new_span_id,
     new_trace_id,
+    traceparent,
 )
-from stampede.trace.store import TraceStore
-from stampede.trace.tracer import Tracer
+from agent_reliability_core.trace.store import TraceStore
+from agent_reliability_core.trace.tracer import Tracer
 
 __all__ = [
     "GenAI",
@@ -33,4 +34,5 @@ __all__ = [
     "TraceStore",
     "new_span_id",
     "new_trace_id",
+    "traceparent",
 ]

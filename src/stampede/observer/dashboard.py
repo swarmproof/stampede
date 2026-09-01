@@ -17,8 +17,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from stampede.trace.schema import GenAI, Swarmproof
-from stampede.trace.store import TraceStore
+from agent_reliability_core.trace.schema import GenAI, Swarmproof
+from agent_reliability_core.trace.store import TraceStore
 
 # fastapi is optional (the [dashboard] extra). Import at module level — not inside
 # build_app — so FastAPI can resolve the stringized `sock: WebSocket` annotation

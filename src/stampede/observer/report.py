@@ -12,11 +12,12 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_reliability_core.trace.schema import GenAI
+from agent_reliability_core.trace.store import TraceStore
+
 from stampede.config import StampedeConfig
 from stampede.orchestrator.engine import RunOutcome
 from stampede.population.agent import Agent, AgentState
-from stampede.trace.schema import GenAI
-from stampede.trace.store import TraceStore
 
 _GRADE_BANDS = [(0.90, "A"), (0.80, "B"), (0.70, "C"), (0.60, "D"), (0.0, "F")]
 _GRADE_ORDER = ["F", "D", "C", "B", "A"]

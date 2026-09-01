@@ -30,6 +30,7 @@ classifiers = [
 # in < 5 min with zero network/LLM (NFR-DX-01, constraint C3). Heavy integrations
 # live in extras below.
 dependencies = [
+    "agent-reliability-core>=0.1",  # the shared trace-format primitive (ADR-4)
     "pydantic>=2.6",
     "pyyaml>=6.0",
     "typer>=0.12",
@@ -80,7 +81,7 @@ Issues = "https://github.com/swarmproof/stampede/issues"
 packages = ["src/stampede"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "core/tests"]
 asyncio_mode = "auto"
 addopts = "-ra"
 # In-memory SQLite trace stores are caller-owned; GC of the connection is benign.

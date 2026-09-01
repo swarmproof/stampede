@@ -1,0 +1,23 @@
+# agent-reliability-core
+
+Shared primitives for the [Swarm Proof](https://github.com/swarmproof) agent-reliability toolkit — extracted from `stampede` at v0.2 (ADR-4).
+
+## trace-format
+
+A **profile of the OpenTelemetry GenAI semantic conventions**: standard `gen_ai.*` attributes plus a namespaced `swarmproof.*` extension for population / persona / chaos / cost context. This is the telemetry contract `stampede`, `mcp-probe`, `costbomb`, and `mockworld` all emit into.
+
+```python
+from agent_reliability_core.trace import Tracer, TraceStore, GenAI, Swarmproof, SpanKind
+
+store = TraceStore(":memory:")
+tracer = Tracer(store, run_id="run_1", seed=42)
+span = tracer.start("chat", kind=SpanKind.CLIENT)
+span.set(GenAI.REQUEST_MODEL, "claude-haiku")
+tracer.end(span)
+```
+
+Dependency-free (stdlib only). Span IDs are deterministic in `(seed, counter)` so seeded runs are byte-reproducible.
+
+The persona-pack, report-renderer, and concurrency-core primitives follow here as they stabilize.
+
+[Apache-2.0](../LICENSE)
