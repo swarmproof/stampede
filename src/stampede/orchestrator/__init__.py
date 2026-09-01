@@ -9,10 +9,11 @@ v0.2. Everything here is seedable so runs are reproducible (FR-OR-06).
 
 from __future__ import annotations
 
-from stampede.orchestrator.clock import AgentClock, SimClock
-from stampede.orchestrator.curves import schedule_offsets
+from agent_reliability_core.concurrency.clock import AgentClock, SimClock
+from agent_reliability_core.concurrency.curves import schedule_offsets
+from agent_reliability_core.concurrency.scheduler import AsyncioExecutor, Executor
+
 from stampede.orchestrator.engine import Orchestrator, RunOutcome
-from stampede.orchestrator.scheduler import AsyncioExecutor, Executor
 
 __all__ = [
     "AgentClock",
