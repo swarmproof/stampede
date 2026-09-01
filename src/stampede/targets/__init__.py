@@ -64,5 +64,9 @@ def build_target(config: "object") -> TargetAdapter:  # noqa: UP037
             transport=config.transport, command=config.command, url=config.url
         )
     if config.type == "evm":
-        raise NotImplementedError("EVMTarget lands in v0.2 (FR-TA-04)")
+        # The Safety Gate (config.safety.evm_require_fork) enforces the fork rule;
+        # the target just reports whether it's a fork via its safety descriptor.
+        from stampede.targets.evm import EVMTarget
+
+        return EVMTarget(rpc_url=config.rpc_url, world=config.world)
     raise ValueError(f"unknown target type: {config.type!r}")
