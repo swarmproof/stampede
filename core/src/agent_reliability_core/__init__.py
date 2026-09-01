@@ -11,8 +11,12 @@ Primitives extracted so far:
 * ``agent_reliability_core.concurrency`` — **concurrency-core**, the virtual-time
   clocks, concurrency curves, and the ``Executor`` protocol the swarm runs on
   (stampede's orchestrator and mcp-probe's load engine).
+* ``agent_reliability_core.persona`` — **persona-pack**, the versioned temperament
+  schema + loader (``extends``, seeded mix, (de)serialization) consumed by
+  stampede's population factory and costbomb's adversarial cohort.
 
-Dependency-free (stdlib only). persona-pack and report-renderer follow.
+trace-format and concurrency-core are stdlib-only; persona-pack adds pydantic +
+pyyaml. report-renderer follows.
 """
 
 from __future__ import annotations
