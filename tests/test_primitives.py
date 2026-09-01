@@ -4,18 +4,18 @@ concurrency curves, the six-state machine, config."""
 from __future__ import annotations
 
 import pytest
-
-from stampede.config import StampedeConfig, parse_duration
-from stampede.orchestrator.curves import schedule_offsets
-from stampede.personas.loader import load_pack, sample_mix
-from stampede.population.agent import AgentState, StateMachine, TransitionError
-from stampede.trace.schema import (
+from agent_reliability_core.trace.schema import (
     REDACT_PLACEHOLDER,
     Span,
     new_span_id,
     new_trace_id,
     traceparent,
 )
+
+from stampede.config import StampedeConfig, parse_duration
+from stampede.orchestrator.curves import schedule_offsets
+from stampede.personas.loader import load_pack, sample_mix
+from stampede.population.agent import AgentState, StateMachine, TransitionError
 
 # ---- trace-format ----
 

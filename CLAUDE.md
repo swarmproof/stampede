@@ -11,7 +11,9 @@ The repo now contains a working **v0.1 implementation** of the critical path (`E
 ## Commands
 
 ```bash
-python -m venv .venv && .venv/bin/pip install -e ".[dev]"   # dev install
+python -m venv .venv
+.venv/bin/pip install -e ./core                             # the shared primitives (agent-reliability-core)
+.venv/bin/pip install -e ".[dev]"                           # then stampede (depends on core)
 .venv/bin/stampede init                                     # write a starter stampede.yaml
 .venv/bin/stampede run --dry-run                            # zero-LLM deterministic run → report
 .venv/bin/stampede run --dry-run --target mock:payments     # the exactly-once world
@@ -37,7 +39,7 @@ Optional extras: `.[mcp]` (real MCP servers), `.[otel]` (OTLP export), `.[dashbo
 
 | Package | Component / role |
 |---|---|
-| `trace/` | trace-format primitive — OTel GenAI profile (`schema`), SQLite store, `Tracer`, OTLP `export` |
+| `core/` (`agent_reliability_core.trace`) | **extracted** trace-format primitive (ADR-4) — OTel GenAI profile (`schema`), SQLite store, `Tracer`. A separate `agent-reliability-core` distribution stampede depends on; siblings consume it too. Import from `agent_reliability_core.trace`, not `stampede.trace`. |
 | `personas/` | persona-pack primitive — v1 schema, loader (`extends` + seeded mix), `packs/core.yaml` (the 6 temperaments) |
 | `targets/` | Target Adapters (`mock`, `http`, `mcp`) + `base` protocol + `safety` gate |
 | `goals/` | Goal Synthesis — template (deterministic) mode + the intent/misuse oracle |

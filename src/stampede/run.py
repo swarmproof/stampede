@@ -15,6 +15,9 @@ import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from agent_reliability_core.trace.store import TraceStore
+from agent_reliability_core.trace.tracer import Tracer
+
 from stampede.chaos.injector import ChaosPolicy
 from stampede.config import StampedeConfig
 from stampede.goals.synth import synthesize
@@ -28,8 +31,6 @@ from stampede.population.providers import cost_usd
 from stampede.targets import build_target
 from stampede.targets.base import TargetAdapter
 from stampede.targets.safety import SafetyGate
-from stampede.trace.store import TraceStore
-from stampede.trace.tracer import Tracer
 
 
 @dataclass

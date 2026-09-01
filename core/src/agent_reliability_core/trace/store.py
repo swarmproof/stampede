@@ -16,7 +16,7 @@ from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
-from stampede.trace.schema import Span, SpanKind
+from agent_reliability_core.trace.schema import Span, SpanKind
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS spans (

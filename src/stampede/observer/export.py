@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from stampede.trace.schema import Span
+from agent_reliability_core.trace.schema import Span
 
 _TICK_TO_NANOS = 1_000_000  # 1 virtual "tick" (a virtual ms) → 1e6 ns
 

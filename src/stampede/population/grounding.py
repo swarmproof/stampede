@@ -22,8 +22,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from agent_reliability_core.trace.schema import Span
+
     from stampede.personas.schema import Persona
-    from stampede.trace.schema import Span
 
 # Weights for the realism distance — misuse dominates (it's the flagship signal).
 _W_MISUSE, _W_GIVEUP, _W_TOKENS = 0.6, 0.2, 0.2
@@ -67,7 +68,7 @@ class RecordedTraffic:
     @classmethod
     def from_spans(cls, spans: list[Span], source: str = "recorded") -> RecordedTraffic:
         """Record mode (FR-OB-09): distill real agent traffic (trace-format spans)."""
-        from stampede.trace.schema import GenAI, Swarmproof
+        from agent_reliability_core.trace.schema import GenAI, Swarmproof
 
         agents = 0
         misused = 0

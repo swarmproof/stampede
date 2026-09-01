@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from stampede.trace.schema import (
+from agent_reliability_core.trace.schema import (
     Span,
     SpanKind,
     SpanSide,
@@ -21,7 +21,7 @@ from stampede.trace.schema import (
     new_trace_id,
     traceparent,
 )
-from stampede.trace.store import TraceStore
+from agent_reliability_core.trace.store import TraceStore
 
 if TYPE_CHECKING:
     pass
