@@ -1,0 +1,16 @@
+# Point a wallet-swarm at a lending protocol — the "open-Gauntlet" demo (FR-TA-04).
+# The mock world runs with zero infra:  stampede run --dry-run -c examples/evm_lending.yaml
+target:
+  type: evm
+  world: lending          # deterministic in-process lending pool (borrow/repay/liquidate)
+  # For a REAL run against an Anvil fork instead (refuses non-fork mainnet RPCs):
+  # rpc_url: "http://localhost:8545"   # start with:  anvil --fork-url <mainnet-rpc>
+
+population:
+  size: 50
+  mix: { naive: 0.4, expert: 0.3, adversarial: 0.3 }   # borrowers + liquidators + griefers
+  models: [dry-run:heuristic]
+
+concurrency: { curve: spike, peak: 50, hold: 10s }      # a price-shock-style burst
+goals: { autogenerate: true, mode: template }
+seed: 42
