@@ -17,8 +17,12 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Software Development :: Testing",
 ]
-# The trace-format primitive is stdlib-only by design — zero runtime deps.
-dependencies = []
+# trace-format and concurrency-core are stdlib-only; persona-pack needs a schema
+# layer (pydantic) and its YAML packs (pyyaml).
+dependencies = [
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+]
 
 [project.optional-dependencies]
 # OTLP export helpers (the wire format itself needs nothing).

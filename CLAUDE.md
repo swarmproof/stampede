@@ -40,7 +40,7 @@ Optional extras: `.[mcp]` (real MCP servers), `.[otel]` (OTLP export), `.[dashbo
 | Package | Component / role |
 |---|---|
 | `core/` (`agent_reliability_core.trace`) | **extracted** trace-format primitive (ADR-4) — OTel GenAI profile (`schema`), SQLite store, `Tracer`. A separate `agent-reliability-core` distribution stampede depends on; siblings consume it too. Import from `agent_reliability_core.trace`, not `stampede.trace`. |
-| `personas/` | persona-pack primitive — v1 schema, loader (`extends` + seeded mix), `packs/core.yaml` (the 6 temperaments) |
+| `personas/` | facade over the **extracted** persona-pack primitive (`agent_reliability_core.persona` — schema, loader, `packs/core.yaml`). stampede keeps the community `registry` and a `load_pack` wrapper that feeds the registry dir to core's `search_paths` (ADR-4). |
 | `targets/` | Target Adapters (`mock`, `http`, `mcp`) + `base` protocol + `safety` gate |
 | `goals/` | Goal Synthesis — template (deterministic) mode + the intent/misuse oracle |
 | `population/` | Population Factory, `Agent` + six-state machine, `brain` (heuristic + LLM), `providers` + cost model |

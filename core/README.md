@@ -29,6 +29,18 @@ offsets = schedule_offsets(size=200, curve="ramp", peak=200, hold=30)   # arriva
 results = await AsyncioExecutor().run(factories, concurrency=200)        # capped, failure-isolated
 ```
 
-The persona-pack and report-renderer primitives follow here as they stabilize.
+## persona-pack
+
+Versioned agent *temperaments* as data — the `swarmproof.dev/persona/v1` schema, `extends` inheritance, seeded mix sampling, and (de)serialization.
+
+```python
+from agent_reliability_core.persona import load_pack, sample_mix
+
+pack = load_pack("core")                                  # the six built-in temperaments
+pack = load_pack("mypack", search_paths=[my_registry])    # + a consumer's own dir
+agents = sample_mix(pack, {"naive": 0.6, "expert": 0.4}, size=50, seed=42)
+```
+
+The report-renderer primitive follows here as it stabilizes.
 
 [Apache-2.0](../LICENSE)
