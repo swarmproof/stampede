@@ -46,7 +46,7 @@ Optional extras: `.[mcp]` (real MCP servers), `.[otel]` (OTLP export), `.[dashbo
 | `population/` | Population Factory, `Agent` + six-state machine, `brain` (heuristic + LLM), `providers` + cost model |
 | `orchestrator/` | the run loop (`engine`). The concurrency-core primitive (`SimClock`, curves, `scheduler`) is **extracted** to `agent_reliability_core.concurrency` (ADR-4) — import from there. |
 | `chaos/` | fault `injector` + `recovery` (exactly-once) |
-| `observer/` | `report` aggregation, `renderer` (HTML/terminal), `dashboard`, `export` |
+| `observer/` | `report` aggregation (domain `RunReport`), `report_view` (adapter → the **extracted** `agent_reliability_core.report` renderer), thin `renderer`, `dashboard`, `export`. The visual vocabulary + theme live in core (ADR-4). |
 | `run.py` | wires the whole pipeline; `cli.py` | the `init`/`run`/`plan` CLI |
 
 Determinism is load-bearing: seeded IDs (blake2b, no wall-clock), per-agent RNGs, and virtual time make `--dry-run` reports byte-identical (NFR-REPRO-01). Never introduce `time.time()`/`random.random()`/wall-clock into the run or report path.
@@ -86,7 +86,7 @@ Core components (each is a pluggable `Protocol` — structural typing, not inher
 - **Chaos Injector** — wraps invokes/lifecycles: `agent_kill`, `tool_timeout`, `tool_failure`, `latency`, `malformed_output`, `rate_limit`; then asserts recovery (hooks `exactly-once`).
 - **Observer** — Tracer (OTel spans → SQLite), live FastAPI+WebSocket+Vue/React dashboard, and the `RunReport`→HTML/terminal report-renderer.
 
-The four **shared primitives** stampede *defines* for the rest of the portfolio: **trace-format**, **persona-pack**, **concurrency-core**, **report-renderer**. These are vendored now and extracted to `agent-reliability-core` at v0.2 (`ADR-4`).
+The four **shared primitives** stampede *defines* for the rest of the portfolio — **trace-format**, **concurrency-core**, **persona-pack**, **report-renderer** — are now **all extracted** into the `agent-reliability-core` distribution under `core/` (`ADR-4` complete). stampede depends on it; siblings (mcp-probe, costbomb, mockworld) consume the same package. Import primitives from `agent_reliability_core.*`, not `stampede.*`.
 
 ## Design invariants (do not violate in any implementation)
 

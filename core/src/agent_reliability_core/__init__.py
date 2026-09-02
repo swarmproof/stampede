@@ -14,9 +14,13 @@ Primitives extracted so far:
 * ``agent_reliability_core.persona`` — **persona-pack**, the versioned temperament
   schema + loader (``extends``, seeded mix, (de)serialization) consumed by
   stampede's population factory and costbomb's adversarial cohort.
+* ``agent_reliability_core.report`` — **report-renderer**, the shared visual
+  vocabulary (badge + KpiRow/Table/Callout/Note), the oxblood ``Theme``, and HTML +
+  terminal renderers. Each tool adapts its own report into this model.
 
 trace-format and concurrency-core are stdlib-only; persona-pack adds pydantic +
-pyyaml. report-renderer follows.
+pyyaml; report-renderer's HTML/terminal backends are the opt-in ``[render]`` extra.
+All four primitives are now extracted (ADR-4 complete).
 """
 
 from __future__ import annotations
