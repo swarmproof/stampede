@@ -11,8 +11,10 @@ from stampede.population.brain import BrainPool, HeuristicBrain, Observation
 from stampede.population.frameworks import (
     FrameworkBrain,
     FrameworkDecision,
+    ToolCapture,
     ToolInfo,
     build_framework_brain,
+    crewai_agent_fn,
     langgraph_agent_fn,
 )
 from stampede.run import run_simulation
@@ -128,3 +130,35 @@ async def test_langgraph_adapter_captures_the_tool_call():
     schema = {"type": "object", "properties": {"record_id": {"type": "string"}}}
     decision = await agent_fn("archive it", [ToolInfo("archive_record", "archive a record", schema)])
     assert decision.tool == "archive_record" and decision.arguments == {"record_id": "rec_9"}
+
+
+# ---- shared capture (framework-agnostic, fully verifiable) ----
+
+
+def test_tool_capture_records_first_call_and_filters_none():
+    cap = ToolCapture()
+    assert cap.decision("x").tool is None  # nothing captured → give up
+    cap.record("borrow", {"amount": 300, "note": None})
+    cap.record("repay", {"amount": 50})
+    d = cap.decision("crewai")
+    assert d.tool == "borrow" and d.arguments == {"amount": 300}  # first call, None dropped
+
+
+# ---- CrewAI adapter (guarded, same capture path as langgraph) ----
+
+
+async def test_crewai_adapter_captures_the_tool_call():
+    pytest.importorskip("langchain_core")  # crewai accepts langchain tools
+
+    class _FakeCrew:
+        def __init__(self, tools, goal):
+            self.tools = tools
+
+        def kickoff(self):  # crewai's kickoff is sync
+            self.tools[0].invoke({"record_id": "rec_7"})
+            return "done"
+
+    agent_fn = crewai_agent_fn(lambda tools, goal: _FakeCrew(tools, goal))
+    schema = {"type": "object", "properties": {"record_id": {"type": "string"}}}
+    decision = await agent_fn("archive it", [ToolInfo("archive_record", "archive a record", schema)])
+    assert decision.tool == "archive_record" and decision.arguments == {"record_id": "rec_7"}
