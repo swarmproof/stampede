@@ -43,7 +43,7 @@ Optional extras: `.[mcp]` (real MCP servers), `.[otel]` (OTLP export), `.[dashbo
 | `personas/` | facade over the **extracted** persona-pack primitive (`agent_reliability_core.persona` — schema, loader, `packs/core.yaml`). stampede keeps the community `registry` and a `load_pack` wrapper that feeds the registry dir to core's `search_paths` (ADR-4). |
 | `targets/` | Target Adapters (`mock`, `http`, `mcp`) + `base` protocol + `safety` gate |
 | `goals/` | Goal Synthesis — template (deterministic) mode + the intent/misuse oracle |
-| `population/` | Population Factory, `Agent` + six-state machine, `brain` (heuristic + LLM), `providers` + cost model |
+| `population/` | Population Factory, `Agent` + six-state machine, `brain` (heuristic + LLM), `providers` + cost model, `frameworks` (v0.3 — drive the swarm with the user's own LangGraph/callable agent via `BrainPool.framework_brain`) |
 | `orchestrator/` | the run loop (`engine`). The concurrency-core primitive (`SimClock`, curves, `scheduler`) is **extracted** to `agent_reliability_core.concurrency` (ADR-4) — import from there. |
 | `chaos/` | fault `injector` + `recovery` (exactly-once) |
 | `observer/` | `report` aggregation (domain `RunReport`), `report_view` (adapter → the **extracted** `agent_reliability_core.report` renderer), thin `renderer`, `dashboard`, `export`. The visual vocabulary + theme live in core (ADR-4). |
