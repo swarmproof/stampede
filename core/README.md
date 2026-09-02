@@ -41,6 +41,18 @@ pack = load_pack("mypack", search_paths=[my_registry])    # + a consumer's own d
 agents = sample_mix(pack, {"naive": 0.6, "expert": 0.4}, size=50, seed=42)
 ```
 
-The report-renderer primitive follows here as it stabilizes.
+## report-renderer
+
+A domain-agnostic report model (badge + `KpiRow`/`Table`/`Callout`/`Note`), the oxblood `Theme`, and HTML + terminal renderers. Each tool adapts its own report into a `Report` and gets the portfolio's look. Needs the `[render]` extra (jinja2 + rich).
+
+```python
+from agent_reliability_core.report import Report, Badge, KpiRow, Kpi, render_html
+
+report = Report(title="My Report", badge=Badge("A"),
+                sections=[KpiRow([Kpi("97%", "success")])])
+html = render_html(report)   # or render_terminal(report)
+```
+
+All four shared primitives are extracted (ADR-4 complete).
 
 [Apache-2.0](../LICENSE)
