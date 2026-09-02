@@ -30,12 +30,12 @@ classifiers = [
 # in < 5 min with zero network/LLM (NFR-DX-01, constraint C3). Heavy integrations
 # live in extras below.
 dependencies = [
-    "agent-reliability-core>=0.1",  # the shared trace-format primitive (ADR-4)
+    # the shared primitives (ADR-4); [render] pulls jinja2+rich for the report renderer.
+    "agent-reliability-core[render]>=0.1",
     "pydantic>=2.6",
     "pyyaml>=6.0",
     "typer>=0.12",
-    "rich>=13.7",
-    "jinja2>=3.1",
+    "rich>=13.7",  # also used directly by the CLI console
 ]
 
 [project.optional-dependencies]
