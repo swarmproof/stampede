@@ -197,16 +197,25 @@ class BrainPool:
     live run, ``ollama:llama3`` agents get an ``LLMBrain`` over the Ollama provider
     while ``dry-run:heuristic`` agents in the same swarm stay heuristic. One live
     provider is built and cached per provider name.
+
+    ``framework_brain`` (a v0.3 framework adapter, e.g. LangGraph) overrides the
+    per-model routing for a live run — the whole swarm is driven by the user's
+    agent. It never applies in ``--dry-run`` (which stays deterministic for CI).
     """
 
-    def __init__(self, dry_run: bool) -> None:
+    def __init__(self, dry_run: bool, framework_brain: Brain | None = None) -> None:
         self.dry_run = dry_run
+        self.framework_brain = framework_brain
         self._heuristic = HeuristicBrain()
         self._llm_by_provider: dict[str, LLMBrain] = {}
 
     def for_agent(self, agent: Agent) -> Brain:
+        if self.dry_run:
+            return self._heuristic
+        if self.framework_brain is not None:
+            return self.framework_brain
         provider = agent.binding.provider
-        if self.dry_run or provider in {"dry-run", "heuristic"}:
+        if provider in {"dry-run", "heuristic"}:
             return self._heuristic
         if provider not in self._llm_by_provider:
             from stampede.population.providers import build_provider
