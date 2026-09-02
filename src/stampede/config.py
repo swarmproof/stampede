@@ -50,7 +50,7 @@ class PopulationConfig(BaseModel):
     pack: str = "core"  # persona pack name or path
     grounded_against: str | None = None  # recording path → report a realism score (FR-OB-07)
     # v0.3 framework adapter: drive the swarm with your own agent (NG-3-respecting).
-    framework: Literal["langgraph", "callable"] = "langgraph"
+    framework: Literal["langgraph", "crewai", "callable"] = "langgraph"
     framework_ref: str | None = None  # "module:attr" — a graph factory or an AgentFn
 
     @field_validator("mix")
