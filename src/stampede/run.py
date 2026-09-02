@@ -53,6 +53,7 @@ async def run_simulation(
     dry_run: bool = True,
     target: TargetAdapter | None = None,
     hub: LiveHub | None = None,
+    brains: BrainPool | None = None,
 ) -> RunResult:
     run_id = _run_id(config)
     store = TraceStore(config.report.trace_db if not dry_run else ":memory:")
@@ -96,10 +97,22 @@ async def run_simulation(
         from stampede.chaos.incident import Incident
 
         chaos_policy.apply_incident(Incident.load(config.chaos.incident))
+
+    # Framework adapter (v0.3): drive a live swarm with the user's own agent.
+    if brains is None:
+        framework_brain = None
+        if config.population.framework_ref and not dry_run:
+            from stampede.population.frameworks import build_framework_brain
+
+            framework_brain = build_framework_brain(
+                config.population.framework, config.population.framework_ref
+            )
+        brains = BrainPool(dry_run=dry_run, framework_brain=framework_brain)
+
     orch = Orchestrator(
         target=target,
         tracer=tracer,
-        brains=BrainPool(dry_run=dry_run),
+        brains=brains,
         chaos=chaos_policy,
         budget_usd=config.report.budget_usd,
         hub=hub,
