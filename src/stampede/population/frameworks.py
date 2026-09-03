@@ -71,46 +71,84 @@ class FrameworkBrain:
         )
 
 
-def langgraph_agent_fn(graph_factory: Callable[[list[Any]], Any]) -> AgentFn:
-    """Adapt a LangGraph react agent to an ``AgentFn``.
+class ToolCapture:
+    """Records tool calls a framework agent makes against capture-stub tools and
+    yields the first as a decision. Framework-agnostic — LangGraph and CrewAI both
+    accept LangChain tools, so they share this. Independently unit-testable."""
 
-    ``graph_factory(tools)`` must return a compiled graph bound to ``tools`` (e.g.
-    ``langgraph.prebuilt.create_react_agent(llm, tools)``). The tools we pass are
-    **capture stubs**: the graph "calls" them, we record the first call, and stampede
-    executes the real tool on the target — so the agent's behaviour is measured while
-    stampede keeps ownership of side effects. Needs ``langchain-core`` + ``langgraph``.
-    """
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, Any]]] = []
 
-    async def agent_fn(goal: str, tools: list[ToolInfo]) -> FrameworkDecision:
+    def record(self, name: str, args: dict[str, Any]) -> None:
+        self.calls.append((name, {k: v for k, v in args.items() if v is not None}))
+
+    def stub_tools(self, tools: list[ToolInfo]) -> list[Any]:
+        """Build LangChain StructuredTools that record calls instead of executing —
+        stampede runs the real call on the target. Each carries an args schema from
+        the target spec so the agent's LLM knows the parameters."""
         from langchain_core.tools import StructuredTool  # lazy — optional dep
         from pydantic import create_model
 
-        captured: list[tuple[str, dict[str, Any]]] = []
-
         def _stub(spec: ToolInfo) -> StructuredTool:
             def _call(**kwargs: Any) -> str:
-                captured.append((spec.name, {k: v for k, v in kwargs.items() if v is not None}))
-                return "ok"  # placeholder; stampede runs the real call on the target
+                self.record(spec.name, kwargs)
+                return "ok"
 
-            # Give the tool an args schema from the target's tool spec, so the agent's
-            # LLM knows the parameters (and so the args survive validation on capture).
             props = (spec.input_schema or {}).get("properties", {})
-            kwargs: dict[str, Any] = {}
+            extra: dict[str, Any] = {}
             if props:
                 fields: dict[str, Any] = {str(name): (Any, None) for name in props}
-                kwargs["args_schema"] = create_model(f"{spec.name}_Args", **fields)
+                extra["args_schema"] = create_model(f"{spec.name}_Args", **fields)
             return StructuredTool.from_function(
-                _call, name=spec.name, description=spec.description, **kwargs
+                _call, name=spec.name, description=spec.description, **extra
             )
 
-        graph = graph_factory([_stub(t) for t in tools])
-        await graph.ainvoke({"messages": [("user", goal)]})
-        if not captured:
-            return FrameworkDecision(tool=None, reasoning="langgraph agent made no tool call")
-        name, args = captured[0]
-        return FrameworkDecision(tool=name, arguments=args, reasoning=f"langgraph agent called {name!r}")
+        return [_stub(t) for t in tools]
+
+    def decision(self, framework: str) -> FrameworkDecision:
+        if not self.calls:
+            return FrameworkDecision(tool=None, reasoning=f"{framework} agent made no tool call")
+        name, args = self.calls[0]
+        return FrameworkDecision(tool=name, arguments=args, reasoning=f"{framework} agent called {name!r}")
+
+
+def _capture_agent_fn(
+    run: Callable[[str, list[Any]], Any], framework: str
+) -> AgentFn:
+    """Build an AgentFn that runs a framework agent over capture stubs. ``run(goal,
+    stub_tools)`` performs the framework-specific invocation (sync or async)."""
+
+    async def agent_fn(goal: str, tools: list[ToolInfo]) -> FrameworkDecision:
+        capture = ToolCapture()
+        result = run(goal, capture.stub_tools(tools))
+        if inspect.isawaitable(result):
+            await result
+        return capture.decision(framework)
 
     return agent_fn
+
+
+def langgraph_agent_fn(graph_factory: Callable[[list[Any]], Any]) -> AgentFn:
+    """Adapt a LangGraph react agent. ``graph_factory(tools)`` returns a compiled
+    graph (e.g. ``langgraph.prebuilt.create_react_agent(llm, tools)``). Needs
+    ``langchain-core`` + ``langgraph``."""
+
+    def run(goal: str, stubs: list[Any]) -> Any:
+        return graph_factory(stubs).ainvoke({"messages": [("user", goal)]})
+
+    return _capture_agent_fn(run, "langgraph")
+
+
+def crewai_agent_fn(crew_factory: Callable[[list[Any], str], Any]) -> AgentFn:
+    """Adapt a CrewAI crew. ``crew_factory(tools, goal)`` returns a Crew whose agent
+    is bound to ``tools`` and tasked with ``goal``; we ``kickoff()`` it and capture
+    the first tool call. CrewAI accepts LangChain tools, so the stubs are shared.
+    Needs ``crewai`` (+ ``langchain-core``)."""
+
+    def run(goal: str, stubs: list[Any]) -> Any:
+        return crew_factory(stubs, goal).kickoff()
+
+    return _capture_agent_fn(run, "crewai")
 
 
 def _import_ref(ref: str) -> Any:
@@ -127,7 +165,10 @@ def build_framework_brain(framework: str, ref: str) -> FrameworkBrain:
     if framework == "langgraph":
         # ref is a graph_factory(tools) -> compiled graph.
         return FrameworkBrain(langgraph_agent_fn(target))
+    if framework == "crewai":
+        # ref is a crew_factory(tools, goal) -> Crew.
+        return FrameworkBrain(crewai_agent_fn(target))
     if framework == "callable":
         # ref is already an AgentFn.
         return FrameworkBrain(target)
-    raise ValueError(f"unknown framework {framework!r} (use 'langgraph' or 'callable')")
+    raise ValueError(f"unknown framework {framework!r} (use 'langgraph', 'crewai', or 'callable')")

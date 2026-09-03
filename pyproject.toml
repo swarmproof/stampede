@@ -45,8 +45,9 @@ providers = ["anthropic>=0.40", "openai>=1.40"]
 # beta reshapes the client façade, and `meta=` on call_tool (used to inject the
 # W3C traceparent into MCP `_meta`) is stable from ~1.27.
 mcp = ["mcp>=1.27,<2"]
-# v0.3 framework adapter — drive the swarm with your own LangGraph agent.
+# v0.3 framework adapters — drive the swarm with your own agent.
 langgraph = ["langgraph>=0.2", "langchain-core>=0.3"]
+crewai = ["crewai>=0.80", "langchain-core>=0.3"]
 # OTLP export of the trace-format to any OTel backend (FR-OB-05, NFR-INTEROP-01).
 otel = [
     "opentelemetry-api>=1.27",
