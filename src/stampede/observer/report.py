@@ -260,6 +260,11 @@ def build_report(
         "destructive_reached": adv_destructive,
         "denial_of_wallet_flags": denial_of_wallet,
     }
+    # The economic cohort embeds costbomb-core (optional): amplification factor + the
+    # cost-explosion playbook. No-op passthrough when stampede[economic] isn't installed.
+    from stampede.adversarial.economic import build_economic_section
+
+    adversarial = build_economic_section(agents, adversarial)
 
     # ---- overall grade ----
     overall_success = _mean([s.success_rate for s in success])
