@@ -18,6 +18,29 @@ Notation: **⊕** = work added beyond `SPEC.md`.
 | **v0.2** | *The premium + the flywheel* | EVMTarget (open-Gauntlet), persona grounding + registry, costbomb extracted, Ray backend, run-diffing, record mode, badge, `--from-probe`, incident replay | ~34 IED |
 | **v0.3** | *The world + the commercial seed* | mockworld deep integration, framework adapters, A2ATarget, governance chaos, hosted report sharing | ~26 IED |
 
+### Implementation status (as of 2026-09-04)
+
+Legend: ✅ shipped & tested · 🚧 partial / scaffolded · ⬜ not started. See `ROADMAP.md` for the public view.
+
+| Epic | Status |
+|---|---|
+| **E1** shared primitives · **E2** targets + safety · **E3** population + goals · **E4** orchestrator + chaos · **E5** observer + report · **E6** CLI | ✅ |
+| **E7** case studies & launch | ⬜ (external) |
+| **E8** EVMTarget | 🚧 mock lending world + fork-guard shipped; live-fork tx + ABI discovery pending (needs Foundry) |
+| **E9** grounding/calibration + realism + record mode | ✅ |
+| **E10** persona registry (`persona add`) | ✅ |
+| **E11** costbomb extracted standalone | ⬜ (embedded cohort only) |
+| **E12** Ray executor backend | 🚧 `Executor` protocol in place; Ray backend not built |
+| **E13** statistical run-diffing (`stampede diff`) | ✅ |
+| **E14** Agent Ready badge + JSON | ✅ |
+| **E15** `--from-probe` | ✅ |
+| **E16** agent-postmortems incident replay | ✅ |
+| **E17** extract `agent-reliability-core` (ADR-4) | ✅ all four primitives extracted |
+| **E19** framework adapters (LangGraph / CrewAI) | ✅ |
+| **E18** mockworld deep integration · **E20** A2ATarget · **E21** governance chaos · **E22** hosted sharing | ⬜ (sibling / commercial / infra-gated) |
+
+Also shipped beyond the plan: live LLM model-mixing (verified against Ollama), full CLI test coverage, and the mandatory Safety Gate + exactly-once recovery as first-class, tested features. The deterministic `--dry-run` path carries the CI gate (142 tests; both packages lint/type-clean).
+
 ---
 
 ## 2. Work breakdown (epics → tasks)
