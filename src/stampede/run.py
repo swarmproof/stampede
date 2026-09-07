@@ -89,6 +89,12 @@ async def run_simulation(
         seed=config.seed,
     )
 
+    # 4b. Economic cohort — adversarial agents pursue costbomb's cost-explosion
+    # playbook (denial-of-wallet). No-op unless stampede[economic] is installed.
+    from stampede.adversarial.economic import assign_economic_goals
+
+    assign_economic_goals(agents, config.seed)
+
     # 5. Orchestrate under chaos. The BrainPool routes each agent to a brain by its
     # model binding — dry-run/heuristic agents stay deterministic; live-model agents
     # (e.g. ollama:llama3) drive the real provider (FR-PF-04 model mixing).

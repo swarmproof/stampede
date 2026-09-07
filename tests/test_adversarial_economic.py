@@ -10,7 +10,11 @@ import pytest
 # (CI installs only `[dev]`), so this file never fails a costbomb-less run.
 pytest.importorskip("costbomb")
 
-from stampede.adversarial.economic import build_economic_section, economic_playbook
+from stampede.adversarial.economic import (
+    assign_economic_goals,
+    build_economic_section,
+    economic_playbook,
+)
 
 
 def _agent(cost: float, adversarial: bool, name: str, goal: str, aid: str):
@@ -50,3 +54,16 @@ def test_passthrough_when_no_adversarial_cohort() -> None:
     agents = [_agent(0.01, False, "expert", "q", "a0")]
     base = {"cohort_size": 0, "denial_of_wallet_flags": 0}
     assert build_economic_section(agents, base) == base
+
+
+def test_assign_economic_goals_targets_only_adversarial() -> None:
+    playbook = set(economic_playbook(count=10))
+    benign = _agent(0.01, False, "expert", "look up a record", "a0")
+    adv = _agent(0.01, True, "economic", "original goal", "a1")
+
+    n = assign_economic_goals([benign, adv], seed=1)
+
+    assert n == 1
+    assert adv.goal.text in playbook  # adversarial agent now pursues a cost-explosion seed
+    assert benign.goal.text == "look up a record"  # benign untouched
+
