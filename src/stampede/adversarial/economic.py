@@ -36,6 +36,36 @@ def economic_playbook(count: int = 5) -> list[str]:
     return texts[:count]
 
 
+def assign_economic_goals(agents: list[Agent], seed: int = 0) -> int:
+    """Point the adversarial cohort at costbomb's cost-explosion playbook.
+
+    Reassigns each adversarial agent's goal to a costbomb attack seed (round-robin),
+    so the cohort actually *pursues* denial-of-wallet strategies rather than being
+    detected after the fact. No-op (returns 0) when costbomb isn't installed or there
+    is no adversarial cohort. Non-adversarial agents are untouched.
+    """
+    adv = [a for a in agents if a.is_adversarial]
+    if not adv:
+        return 0
+    try:
+        playbook = economic_playbook(count=max(len(adv), 10))
+    except ImportError:
+        return 0
+    if not playbook:
+        return 0
+
+    from stampede.goals.schema import Goal, Intent
+
+    for i, agent in enumerate(adv):
+        agent.goal = Goal(
+            id=f"g_econ_{agent.id}",
+            text=playbook[i % len(playbook)],
+            labeled=False,  # economic goals target cost, not the tool-misuse oracle
+            intent=Intent(),
+        )
+    return len(adv)
+
+
 def build_economic_section(agents: list[Agent], adversarial: dict[str, Any]) -> dict[str, Any]:
     """Enrich the ``adversarial`` report dict with costbomb's economic findings.
 
