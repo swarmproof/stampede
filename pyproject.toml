@@ -61,7 +61,7 @@ evm = ["web3>=6.15"]
 # v0.2 distributed backend.
 ray = ["ray>=2.9"]
 # The adversarial:economic cohort — embeds costbomb-core (denial-of-wallet fuzzing).
-economic = ["costbomb @ git+https://github.com/swarmproof/costbomb"]
+economic = ["costbomb @ git+https://github.com/swarmproof/costbomb@v0.2.0"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

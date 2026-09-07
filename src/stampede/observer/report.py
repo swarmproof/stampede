@@ -264,7 +264,7 @@ def build_report(
     # cost-explosion playbook. No-op passthrough when stampede[economic] isn't installed.
     from stampede.adversarial.economic import build_economic_section
 
-    adversarial = build_economic_section(agents, adversarial)
+    adversarial = build_economic_section(agents, adversarial, store)
 
     # ---- overall grade ----
     overall_success = _mean([s.success_rate for s in success])
