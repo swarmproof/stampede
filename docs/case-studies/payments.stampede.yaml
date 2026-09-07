@@ -1,0 +1,36 @@
+target:
+  type: mock
+  world: payments
+
+population:
+  size: 60
+  mix:
+    naive: 0.35
+    expert: 0.20
+    impatient: 0.20
+    frugal: 0.10
+    adversarial: 0.15   # costbomb's economic-attack cohort
+  models: ["dry-run:heuristic"]
+
+goals:
+  autogenerate: true
+  mode: template
+
+concurrency:
+  curve: spike        # everyone shows up at once — the worst case
+  peak: 60
+  hold: 30s
+
+chaos:
+  inject: [tool_timeout, tool_failure, latency, malformed_output, rate_limit]
+  rate: 0.20
+  assert_recovery: true   # the exactly-once claim, under fault
+
+safety:
+  acknowledge_non_production: true
+
+report:
+  trace_db: ":memory:"
+  out: "./report.html"
+
+seed: 42
