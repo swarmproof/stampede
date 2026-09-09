@@ -66,12 +66,80 @@ def assign_economic_goals(agents: list[Agent], seed: int = 0) -> int:
     return len(adv)
 
 
-def build_economic_section(agents: list[Agent], adversarial: dict[str, Any]) -> dict[str, Any]:
+def _cb_span_dict(span: Any) -> dict[str, Any]:
+    """A stampede trace-format span → the dict costbomb's Span.from_dict expects.
+
+    Both sides are the same OTel GenAI profile, so this is a field copy, not a
+    translation.
+    """
+    kind = getattr(span.kind, "value", span.kind)
+    return {
+        "name": span.name,
+        "trace_id": span.trace_id,
+        "span_id": span.span_id,
+        "parent_span_id": span.parent_span_id,
+        "kind": kind,
+        "service_name": getattr(span, "service_name", "stampede"),
+        "start_tick": getattr(span, "start_tick", 0),
+        "end_tick": getattr(span, "end_tick", 0),
+        "attributes": dict(span.attributes),
+        "status": getattr(span, "status", "OK"),
+        "status_message": getattr(span, "status_message", ""),
+    }
+
+
+def metered_cohort(agents: list[Agent], store: Any) -> dict[str, dict[str, float]]:
+    """Re-meter each adversarial agent's *real* trace with costbomb's meter.
+
+    costbomb's sum-over-sources oracle (model tokens + tool fees + spawn roll-up, and
+    the blast-radius extension) runs directly on stampede's spans — same OTel GenAI
+    profile, no conversion beyond a field copy. Agents whose model costbomb can't price
+    (e.g. the dry-run heuristic) are skipped, so this is purely additive. Returns
+    ``{agent_id: {model_usd, tool_usd, total_usd, blast_radius_usd}}``.
+    """
+    try:
+        from costbomb._vendor.trace import GenAI, Span, Trace
+        from costbomb.meter import CostMeter
+        from costbomb.pricing import PriceTable, UnpricedModelError
+    except ImportError:
+        return {}
+
+    all_spans = list(store.all_spans())
+    sessions = {
+        s.attributes.get(GenAI.AGENT_ID): s
+        for s in all_spans
+        if s.attributes.get(GenAI.OPERATION_NAME) == "invoke_agent"
+        and s.attributes.get(GenAI.AGENT_ID)
+    }
+    meter = CostMeter(PriceTable.default())
+    out: dict[str, dict[str, float]] = {}
+    for agent in agents:
+        session = sessions.get(agent.id)
+        if session is None:
+            continue
+        spans = [Span.from_dict(_cb_span_dict(s)) for s in all_spans if s.trace_id == session.trace_id]
+        try:
+            bd = meter.cost(Trace(root_span_id=session.span_id, spans=spans), annotate=False)
+        except UnpricedModelError:
+            continue  # dry-run/heuristic models aren't in the price table — skip, additive
+        out[agent.id] = {
+            "model_usd": bd.model_usd,
+            "tool_usd": bd.tool_usd,
+            "total_usd": bd.total_usd,
+            "blast_radius_usd": bd.blast_radius_usd,
+        }
+    return out
+
+
+def build_economic_section(
+    agents: list[Agent], adversarial: dict[str, Any], store: Any = None
+) -> dict[str, Any]:
     """Enrich the ``adversarial`` report dict with costbomb's economic findings.
 
     Amplification = the worst adversarial agent's cost over a benign baseline (median
-    of the non-adversarial cohort). Returns the merged dict; a passthrough if costbomb
-    isn't installed or there is no adversarial cohort.
+    of the non-adversarial cohort). When ``store`` is given, each finding also carries
+    costbomb's own metered breakdown of that agent's real trace (``metered``). A
+    passthrough if costbomb isn't installed or there is no adversarial cohort.
     """
     try:
         from costbomb._vendor.run_report import merge_economic_section
@@ -86,17 +154,20 @@ def build_economic_section(agents: list[Agent], adversarial: dict[str, Any]) -> 
     baseline = statistics.median(benign) if benign else min(a.memory.cost_usd for a in adv)
     baseline = max(baseline, 1e-9)
 
+    metered = metered_cohort(adv, store) if store is not None else {}
     ranked = sorted(adv, key=lambda a: a.memory.cost_usd, reverse=True)
-    findings = [
-        {
+    findings = []
+    for i, a in enumerate(ranked, start=1):
+        finding = {
             "rank": i,
             "persona": a.persona.name,
             "cost_usd": round(a.memory.cost_usd, 6),
             "amplification_factor": round(a.memory.cost_usd / baseline, 2),
             "repro": {"goal": a.goal.text, "agent_id": a.id},
         }
-        for i, a in enumerate(ranked, start=1)
-    ]
+        if a.id in metered:  # costbomb's own sum-over-sources reading of the real trace
+            finding["metered"] = {k: round(v, 6) for k, v in metered[a.id].items()}
+        findings.append(finding)
     worst = ranked[0].memory.cost_usd
     economic = {
         "baseline_usd": round(baseline, 6),
