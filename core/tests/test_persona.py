@@ -20,10 +20,12 @@ personas:
 """
 
 
-def test_builtin_core_pack_loads_with_six_personas():
+def test_builtin_core_pack_loads_with_seven_personas():
     assert "core" in list_builtin_packs()
     pack = load_pack("core")
-    assert set(pack.personas) == {"naive", "expert", "impatient", "frugal", "adversarial", "drunk"}
+    assert set(pack.personas) == {
+        "naive", "expert", "impatient", "frugal", "adversarial", "drunk", "economic",
+    }
 
 
 def test_extends_inheritance():

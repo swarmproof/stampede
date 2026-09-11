@@ -52,9 +52,11 @@ def test_span_redacts_secrets():
 # ---- persona-pack ----
 
 
-def test_core_pack_has_six_personas():
+def test_core_pack_has_seven_personas():
     pack = load_pack("core")
-    assert set(pack.personas) == {"naive", "expert", "impatient", "frugal", "adversarial", "drunk"}
+    assert set(pack.personas) == {
+        "naive", "expert", "impatient", "frugal", "adversarial", "drunk", "economic",
+    }
 
 
 def test_extends_inheritance_merges_overrides_only():
@@ -64,6 +66,33 @@ def test_extends_inheritance_merges_overrides_only():
     assert impatient.temperament.patience == 2  # overridden
     assert impatient.temperament.retry_policy == "aggressive"  # overridden
     assert impatient.temperament.misread_rate == naive.temperament.misread_rate  # inherited
+
+
+def test_economic_persona_is_high_cost_adversarial():
+    econ = load_pack("core").get("economic")
+    assert econ.is_adversarial
+    assert "denial_of_wallet" in econ.attacks
+    # a deliberately huge budget vs a frugal agent → the amplification factor is real
+    assert econ.temperament.token_budget > 10 * load_pack("core").get("frugal").temperament.token_budget
+
+
+def test_economic_persona_models_more_cost_per_turn():
+    from stampede.goals.schema import Goal
+    from stampede.population.agent import Agent, ModelBinding
+    from stampede.population.brain import _modeled_tokens
+    from stampede.targets.base import ToolSet, ToolSpec
+
+    pack = load_pack("core")
+    toolset = ToolSet(tools=[ToolSpec(name="t1"), ToolSpec(name="t2")])
+
+    def _agent(persona: str) -> Agent:
+        return Agent(id="a", index=0, persona=pack.get(persona),
+                     binding=ModelBinding.parse("dry-run:heuristic"),
+                     goal=Goal(id="g", text="x"), seed=1)
+
+    econ_in, _ = _modeled_tokens(_agent("economic"), toolset, turn=3)
+    frugal_in, _ = _modeled_tokens(_agent("frugal"), toolset, turn=3)
+    assert econ_in > frugal_in  # the cost attacker burns more per turn → real amplification
 
 
 def test_adversarial_is_flagged_and_loads_attacks():
