@@ -45,6 +45,10 @@ live run. See [`examples/`](./examples) for MCP / HTTP / mock walkthroughs.
 
 See [`SPEC.md`](./SPEC.md) for the full design and [`ROADMAP.md`](./ROADMAP.md) for what ships when.
 
+## See it in action
+
+[**Case study #1 — Success theater in a payments API**](./docs/case-studies/01-payments-success-theater.md): 60 agents against a Stripe-shaped surface, graded **B**. Every agent finished its task; **24% finished the wrong one** — 42% of agents told to *charge a customer* called *list charges* instead, and 37% of agents told to *read* charges **charged the card**. Exactly-once held under an 11-fault chaos storm; the adversarial cohort was contained. Fully reproducible from [one config + one command](./docs/case-studies/payments.stampede.yaml).
+
 ## Part of the Swarm Proof toolkit
 
 *Trust infrastructure for the agent economy — seven projects, one thesis.*
