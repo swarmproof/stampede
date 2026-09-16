@@ -50,6 +50,24 @@ async def test_dry_run_reports_are_byte_identical():
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
 
 
+def test_run_id_is_an_experiment_fingerprint_not_an_output_path():
+    """The run id identifies the experiment, not where its artifacts land.
+    Regression guard: output sinks (out/trace_db/live) must not change the id;
+    the experiment config (seed, population, ...) must."""
+    from stampede.run import _run_id
+
+    base = _cfg()
+    # differ ONLY in output sinks → same fingerprint
+    sinks_a = _cfg(report={"out": "/tmp/a.html", "trace_db": ":memory:", "live": False})
+    sinks_b = _cfg(report={"out": "./elsewhere/b.html", "trace_db": "./run.db", "live": True})
+    assert _run_id(sinks_a) == _run_id(sinks_b) == _run_id(base)
+    # differ in the experiment → different fingerprint
+    assert _run_id(_cfg(seed=7)) != _run_id(base)
+    assert _run_id(_cfg(population={"size": 10, "mix": {"naive": 1.0}, "models": ["dry-run:heuristic"]})) != _run_id(base)
+    # budget stays in the fingerprint — it can change outcomes via the hard-stop
+    assert _run_id(_cfg(report={"budget_usd": 1.0})) != _run_id(_cfg(report={"budget_usd": 2.0}))
+
+
 async def test_dry_run_50_agents_under_30s():
     t0 = time.perf_counter()
     await run_simulation(_cfg(), dry_run=True)

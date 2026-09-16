@@ -40,9 +40,22 @@ class RunResult:
     outcome: RunOutcome
 
 
+# Report fields that pick *where artifacts land*, not *what the run does*. Excluded
+# from the run-id fingerprint so the same experiment keeps the same id no matter
+# where its HTML/DB are written (NFR-REPRO-01). budget_usd stays in — it can change
+# outcomes via the hard-stop, so it's part of the experiment.
+_RUNID_EXCLUDED_SINKS = {"out", "live", "trace_db", "plan_only"}
+
+
 def _run_id(config: StampedeConfig) -> str:
-    """Deterministic run id from seed + config — no wall clock (NFR-REPRO-01)."""
-    blob = config.model_dump_json().encode()
+    """Deterministic *experiment* fingerprint: seed + the config that shapes the run.
+
+    A run id identifies an experiment — target, population, goals, concurrency,
+    chaos, seed — not the paths its report happens to be written to. Output sinks
+    are excluded so two runs that differ only in ``--out``/``--json`` share an id
+    (they produce byte-identical findings). No wall clock (NFR-REPRO-01).
+    """
+    blob = config.model_dump_json(exclude={"report": _RUNID_EXCLUDED_SINKS}).encode()
     short = hashlib.blake2b(blob, digest_size=4).hexdigest()
     return f"run_seed{config.seed}_{short}"
 
