@@ -61,7 +61,7 @@ evm = ["web3>=6.15"]
 # v0.2 distributed backend.
 ray = ["ray>=2.9"]
 # The adversarial:economic cohort — embeds costbomb-core (denial-of-wallet fuzzing).
-economic = ["costbomb @ git+https://github.com/swarmproof/costbomb@v0.2.0"]
+economic = ["costbomb>=0.2"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
@@ -84,11 +84,6 @@ Issues = "https://github.com/swarmproof/stampede/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/stampede"]
-
-# The `economic` extra pins costbomb by git URL (not yet on PyPI); allow the direct
-# reference so metadata generation doesn't fail. Switch to a version when costbomb ships.
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "core/tests"]
