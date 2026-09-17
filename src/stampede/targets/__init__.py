@@ -8,6 +8,8 @@ under test so the orchestrator is target-agnostic. v0.1 ships:
 * :class:`~stampede.targets.http.HTTPTarget` — an OpenAPI/REST spec → ToolSet.
 * :class:`~stampede.targets.mcp.MCPTarget` — a real MCP server over stdio or
   Streamable HTTP.
+* :class:`~stampede.targets.mockworld.MockworldTarget` — the mockworld mock library
+  (all built-in + registry mocks) in-process; needs ``stampede[mockworld]``.
 
 The :class:`~stampede.targets.safety.SafetyGate` runs *before* any of them connect.
 """
@@ -53,6 +55,10 @@ def build_target(config: "object") -> TargetAdapter:  # noqa: UP037
         from stampede.targets.mock import MockTarget
 
         return MockTarget(world=config.world or "crm")
+    if config.type == "mockworld":
+        from stampede.targets.mockworld import MockworldTarget
+
+        return MockworldTarget(world=config.world or "payments", faults=config.faults)
     if config.type == "http":
         from stampede.targets.http import HTTPTarget
 
