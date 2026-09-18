@@ -34,12 +34,13 @@ def parse_duration(value: str | int | float) -> int:
 
 
 class TargetConfig(BaseModel):
-    type: Literal["mcp", "http", "mock", "evm"] = "mock"
+    type: Literal["mcp", "http", "mock", "mockworld", "evm"] = "mock"
     transport: Literal["stdio", "http", "sse"] = "stdio"
     command: str | None = None  # mcp/stdio: the server launch command
     url: str | None = None  # mcp/http, http: the endpoint
     spec: str | None = None  # http: path/URL to an OpenAPI spec
-    world: str | None = None  # mock: which built-in world (e.g. "crm", "payments")
+    world: str | None = None  # mock/mockworld: which world/mock (e.g. "crm", "payments")
+    faults: str = "realistic"  # mockworld: fault profile (none|realistic|hostile|<name>)
     rpc_url: str | None = None  # evm: the fork RPC (v0.2)
 
 
