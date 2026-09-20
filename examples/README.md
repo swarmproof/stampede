@@ -22,6 +22,23 @@ Try the other world:
 stampede run --dry-run --target mock:payments   # exercises exactly-once under chaos
 ```
 
+## 1b. The full mockworld library (all built-in + registry mocks)
+
+The built-in worlds above are hand-coded for the dry-run pipeline. For the real
+[mockworld](https://github.com/swarmproof/mockworld) library — every built-in and
+public-registry mock, with business-logic faults, per-session isolation, and a
+sandbox — use the `mockworld` target:
+
+```bash
+pip install "stampede[mockworld]"                                  # pulls mockworld-mcp
+stampede run --config examples/mockworld_crm.yaml --dry-run        # the misuse map
+stampede run --config examples/mockworld_payments.yaml --dry-run   # transport chaos + business faults + exactly-once
+```
+
+`mockworld_payments.yaml` is the joint chaos demo: stampede kills agents and injects
+timeouts (transport layer) while mockworld throws `card_declined`/429s (business
+layer), and the run asserts the charge fires **exactly once** across both.
+
 ## 2. A real MCP server (stdio)
 
 `echo_server.py` is a minimal MCP server with the same two confusable tools.
