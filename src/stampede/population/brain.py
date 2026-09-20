@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
 from stampede.population.agent import Agent
 from stampede.population.providers import ModelProvider
@@ -235,17 +235,45 @@ def _match_by_text(text: str, toolset: ToolSet) -> str | None:
     return best[1] if best else None
 
 
+def _placeholder(name: str, schema: dict[str, Any], index: int) -> Any:
+    """A deterministic placeholder value that respects the field's declared type.
+
+    The dry-run heuristic doesn't reason about arguments, but a realistic target
+    (e.g. a mockworld world) validates types and enums, so a bare ``"amount_3"``
+    string bounces off an ``integer`` field. Emitting the right *shape* lets the
+    plumbing exercise more of a strict target — though it still can't invent
+    stateful, cross-call values (a real ``charge_id``); that's the LLM/framework
+    brain's job. No wall-clock/random — index-seeded so dry-run stays reproducible.
+    """
+    if schema.get("enum"):
+        return schema["enum"][0]
+    match schema.get("type"):
+        case "integer":
+            return index + 1
+        case "number":
+            return float(index + 1)
+        case "boolean":
+            return False
+        case "array":
+            return []
+        case "object":
+            return {}
+        case _:
+            return f"{name}_{index}"
+
+
 def _args_for(tool: str | None, agent: Agent, toolset: ToolSet) -> dict:
     if tool is None:
         return {}
     spec = toolset.get(tool)
     if spec is None:
         return {}
-    props = set((spec.input_schema or {}).get("properties", {}))
+    properties = (spec.input_schema or {}).get("properties", {})
+    props = set(properties)
     # Prefer the goal's pre-computed args, filtered to what this tool accepts.
     args = {k: v for k, v in agent.goal.args.items() if k in props}
-    # Fill any required arg the goal didn't provide, deterministically.
+    # Fill any required arg the goal didn't provide, deterministically + type-aware.
     for req in (spec.input_schema or {}).get("required", []):
         if req not in args:
-            args[req] = f"{req}_{agent.index}"
+            args[req] = _placeholder(req, properties.get(req, {}), agent.index)
     return args
