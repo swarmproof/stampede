@@ -1,0 +1,24 @@
+# The joint chaos demo: stampede's transport chaos + mockworld's business faults,
+# with exactly-once asserted across both layers.
+# Zero infra, zero keys:  stampede run --dry-run -c examples/mockworld_payments.yaml
+#
+# Needs the mockworld extra:  pip install "stampede[mockworld]"
+target:
+  type: mockworld
+  world: payments         # charge_customer keyed by idempotency_key
+  faults: hostile         # mockworld throws card_declined / insufficient_funds / 429s
+
+population:
+  size: 50
+  mix: { naive: 0.5, expert: 0.4, adversarial: 0.1 }
+  models: [dry-run:heuristic]
+
+concurrency: { curve: spike, peak: 50, hold: 10s }
+goals: { autogenerate: true, mode: template }
+
+chaos:
+  kill_agents_at: [random]        # transport-layer kill mid-call (stampede's layer)
+  inject: [tool_timeout]          # rate_limit is deferred to mockworld's semantic 429
+  assert_recovery: true           # → did the charge fire exactly once across both layers?
+
+seed: 42

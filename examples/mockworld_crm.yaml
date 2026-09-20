@@ -1,0 +1,17 @@
+# Point a swarm at mockworld's crm world — the delete-vs-archive misuse map.
+# Zero infra, zero keys:  stampede run --dry-run -c examples/mockworld_crm.yaml
+#
+# Needs the mockworld extra:  pip install "stampede[mockworld]"
+target:
+  type: mockworld
+  world: crm              # the full mockworld mock (archive_record vs delete_record + audit log)
+  faults: realistic       # business-logic faults injected by mockworld
+
+population:
+  size: 50
+  mix: { naive: 0.6, expert: 0.3, adversarial: 0.1 }   # naive agents confuse hide with delete
+  models: [dry-run:heuristic]
+
+concurrency: { curve: ramp, peak: 50, hold: 20s }
+goals: { autogenerate: true, mode: template }
+seed: 42
