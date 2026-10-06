@@ -1,0 +1,47 @@
+# Multi-step agents — sequence tool calls against a STATEFUL target.
+#
+# By default an agent makes ONE tool decision (the misuse-map measurement). Some
+# goals need a sequence: you can't `charge` a customer that doesn't exist yet. Set
+# population.max_steps > 1 and each agent observes every result and decides again
+# (create_customer -> create_charge -> ...), stopping when its brain reports done.
+#
+# Multi-step only pays off with a reasoning brain (a live LLM or your own framework
+# agent) — the dry-run heuristic makes its one reach and stops. And it needs an
+# actionable step 0, which schema-aware goal synthesis provides automatically.
+#
+# Prereqs:
+#   pip install -e ".[providers,mockworld]"    # live brain + the mockworld target
+#   ollama pull mistral-small                  # or any tool-capable local model
+#
+# Run LIVE (no --dry-run — real model calls drive the sequence):
+#   stampede run --config examples/multi_step.yaml
+
+target:
+  type: mockworld             # a stateful fake Stripe over MCP, with per-session isolation
+  world: payments
+  faults: none                # isolate the sequencing from business declines while learning
+
+population:
+  size: 4
+  mix: { expert: 1.0 }
+  models: [ "ollama:mistral-small" ]
+  max_steps: 6                # ← the knob: up to 6 decisions per agent (default 1)
+
+goals:
+  autogenerate: true
+  mode: template              # schema-aware — bakes concrete ids/amounts into goals
+
+concurrency: { curve: steady, peak: 2, hold: 0 }   # local models are slow
+
+chaos:
+  inject: []                  # start clean; add faults once sequencing works
+  rate: 0.0
+
+safety:
+  acknowledge_non_production: true
+
+report:
+  budget_usd: 0.00            # Ollama is free
+  trace_db: ./stampede-run.db # persist the trace to inspect each agent's steps
+
+seed: 42

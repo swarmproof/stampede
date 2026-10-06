@@ -96,6 +96,20 @@ stampede plan                # per-persona cost estimate, no target contact
 stampede run --budget 2.00   # hard-stops near the cap, still writes a valid report
 ```
 
+## Multi-step agents (stateful targets)
+
+By default an agent makes one tool decision. For goals that need a sequence
+(`create_customer` → `create_charge`), set `population.max_steps > 1` so each agent
+observes every result and decides again. Pays off with a live/framework brain:
+
+```bash
+pip install -e ".[providers,mockworld]"            # live brain + the mockworld target
+stampede run --config examples/multi_step.yaml     # live; agents sequence create → charge
+```
+
+See [`../docs/guides/multi-step-agents.md`](../docs/guides/multi-step-agents.md) for how
+it changes the misuse map and where its ceiling is.
+
 ## CI gate
 
 ```bash
