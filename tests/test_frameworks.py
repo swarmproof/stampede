@@ -162,3 +162,56 @@ async def test_crewai_adapter_captures_the_tool_call():
     schema = {"type": "object", "properties": {"record_id": {"type": "string"}}}
     decision = await agent_fn("archive it", [ToolInfo("archive_record", "archive a record", schema)])
     assert decision.tool == "archive_record" and decision.arguments == {"record_id": "rec_7"}
+
+
+# ---- multi-step framework mode (plan replay) ----
+
+
+def test_tool_capture_decisions_returns_full_sequence():
+    cap = ToolCapture()
+    cap.record("create_item", {"item_id": "it_1"})
+    cap.record("use_item", {"item_id": "it_1"})
+    assert [d.tool for d in cap.decisions("langgraph")] == ["create_item", "use_item"]
+
+
+async def test_framework_plan_replays_one_call_per_step():
+    from stampede.population.frameworks import FrameworkBrain
+
+    plan = [
+        FrameworkDecision(tool="create_item", arguments={"item_id": "it_1"}),
+        FrameworkDecision(tool="use_item", arguments={"item_id": "it_1"}),
+    ]
+    brain = FrameworkBrain(plan_fn=lambda g, t: plan)
+    ts, a = await _crm(), _agent()
+    assert (await brain.decide(a, ts, Observation(0))).tool == "create_item"
+    assert (await brain.decide(a, ts, Observation(1))).tool == "use_item"
+    d2 = await brain.decide(a, ts, Observation(2))
+    assert d2.tool is None and d2.done  # plan exhausted → done, not give_up
+
+
+async def test_framework_empty_plan_gives_up():
+    from stampede.population.frameworks import FrameworkBrain
+
+    d = await FrameworkBrain(plan_fn=lambda g, t: []).decide(_agent(), await _crm(), Observation(0))
+    assert d.tool is None and d.give_up
+
+
+async def test_langgraph_plan_captures_a_two_tool_sequence():
+    pytest.importorskip("langchain_core")
+    from stampede.population.frameworks import langgraph_plan_fn
+
+    class _FakeGraph:
+        def __init__(self, tools):
+            self.by_name = {t.name: t for t in tools}
+
+        async def ainvoke(self, state):
+            self.by_name["create_item"].invoke({"item_id": "it_9"})
+            self.by_name["use_item"].invoke({"item_id": "it_9"})
+            return state
+
+    schema = {"type": "object", "properties": {"item_id": {"type": "string"}}}
+    plan = await langgraph_plan_fn(lambda tools: _FakeGraph(tools))(
+        "do it", [ToolInfo("create_item", "c", schema), ToolInfo("use_item", "u", schema)]
+    )
+    assert [d.tool for d in plan] == ["create_item", "use_item"]
+    assert plan[0].arguments == {"item_id": "it_9"}

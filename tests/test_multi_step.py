@@ -108,3 +108,21 @@ async def test_multi_step_dry_run_is_deterministic():
     b = (await run_simulation(_cfg(max_steps=3), dry_run=True)).report.to_dict()
     import json
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
+
+
+async def test_framework_plan_drives_create_then_use():
+    # A framework's captured plan [create, use] replays across engine steps against
+    # the real stateful target — the multi-step framework path.
+    from stampede.population.frameworks import FrameworkBrain, FrameworkDecision
+
+    target = FakeStatefulTarget()
+    plan = [
+        FrameworkDecision(tool="create_item", arguments={"item_id": "it_9"}),
+        FrameworkDecision(tool="use_item", arguments={"item_id": "it_9"}),
+    ]
+    result = await run_simulation(
+        _cfg(max_steps=4), dry_run=False, target=target, brains=_Pool(FrameworkBrain(plan_fn=lambda g, t: plan))
+    )
+    assert target.log == [("create_item", True), ("use_item", True)]
+    assert "it_9" in target.items
+    assert result.outcome.agents[0].sm.state.value == "DONE"

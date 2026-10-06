@@ -53,6 +53,21 @@ Multi-step composes with two other things:
 See [`examples/multi_step.yaml`](../../examples/multi_step.yaml) for a runnable live
 setup against a mockworld fake Stripe.
 
+### Framework agents (LangGraph / CrewAI)
+
+When you drive the swarm with your own agent (`population.framework_ref`), multi-step
+**replays the framework's full captured tool sequence** — one call per engine step
+against the real target — instead of truncating to the agent's first call. So a crew
+that internally does `create_customer` → `create_charge` runs both, wrapped in
+stampede's chaos, tracing, and exactly-once checks.
+
+Honest ceiling: that plan is captured against stampede's stub tools, so it's the
+agent's *intended* sequence — it doesn't observe real intermediate results (a real
+`charge_id`). True reactive, state-threaded sequencing would require the framework to
+drive the target directly, which the capture design deliberately doesn't allow (stampede
+owns the invoke for chaos + the report). For reactive recovery, use the live `LLMBrain`
+path, which re-decides against each real result.
+
 ## How the report changes
 
 - **Misuse (ADR-5)** is now *"the intended tool was never called across the whole
