@@ -46,18 +46,39 @@ class FrameworkDecision:
 AgentFn = Callable[[str, list[ToolInfo]], Union["FrameworkDecision", Awaitable["FrameworkDecision"]]]
 
 
+# A plan function: (goal, tools) → the framework agent's FULL tool sequence. Sync/async.
+PlanFn = Callable[[str, list["ToolInfo"]], "list[FrameworkDecision] | Awaitable[list[FrameworkDecision]]"]
+
+
 class FrameworkBrain:
-    """Implements stampede's Brain by delegating the decision to an ``AgentFn``.
+    """Implements stampede's Brain by delegating to the user's framework agent.
 
-    Experimental / off the CI blocking path — a real framework run needs the
-    framework + a model, like the LLM brain."""
+    Two shapes, both experimental / off the CI blocking path:
 
-    def __init__(self, agent_fn: AgentFn) -> None:
+    * ``agent_fn`` — returns ONE decision per call (the ``callable`` framework).
+    * ``plan_fn`` — returns the framework's FULL captured tool sequence; stampede's
+      multi-step loop then executes it one call per step against the real target
+      (``max_steps`` > 1). At ``max_steps == 1`` only the first call runs — exactly
+      the original single-capture behaviour.
+
+    The plan is formed against capture stubs, so it is the agent's *intended*
+    sequence: it doesn't observe real intermediate results (that would need the
+    framework to drive the target directly). Honest ceiling, noted in the guide.
+    """
+
+    def __init__(self, agent_fn: AgentFn | None = None, *, plan_fn: PlanFn | None = None) -> None:
         self.agent_fn = agent_fn
+        self.plan_fn = plan_fn
+        self._plans: dict[str, list[FrameworkDecision]] = {}
 
     async def decide(self, agent: Agent, toolset: ToolSet, obs: Observation) -> Decision:
         tools = [ToolInfo(t.name, t.description, t.input_schema) for t in toolset.tools]
         try:
+            if self.plan_fn is not None:
+                return await self._decide_from_plan(agent, tools, obs)
+            if obs.turn > 0:  # single-decision agent: one reach, then done (like the heuristic)
+                return Decision(tool=None, done=True, reasoning="framework agent: single decision complete")
+            assert self.agent_fn is not None
             result = self.agent_fn(agent.goal.text, tools)
             if inspect.isawaitable(result):
                 result = await result
@@ -69,6 +90,25 @@ class FrameworkBrain:
             reasoning=result.reasoning or (f"agent chose {result.tool!r}" if result.tool else "no tool call"),
             give_up=result.tool is None,
         )
+
+    async def _decide_from_plan(self, agent: Agent, tools: list[ToolInfo], obs: Observation) -> Decision:
+        if obs.turn == 0 or agent.id not in self._plans:
+            assert self.plan_fn is not None
+            plan = self.plan_fn(agent.goal.text, tools)
+            if inspect.isawaitable(plan):
+                plan = await plan
+            self._plans[agent.id] = list(plan)
+        plan = self._plans[agent.id]
+        if not plan:
+            return Decision(tool=None, give_up=True, reasoning="framework agent made no tool call")
+        if obs.turn < len(plan):
+            d = plan[obs.turn]
+            return Decision(
+                tool=d.tool,
+                arguments=d.arguments,
+                reasoning=d.reasoning or f"framework step {obs.turn}: {d.tool!r}",
+            )
+        return Decision(tool=None, done=True, reasoning=f"framework plan complete ({len(plan)} calls)")
 
 
 class ToolCapture:
@@ -111,6 +151,13 @@ class ToolCapture:
         name, args = self.calls[0]
         return FrameworkDecision(tool=name, arguments=args, reasoning=f"{framework} agent called {name!r}")
 
+    def decisions(self, framework: str) -> list[FrameworkDecision]:
+        """Every captured call, in order — the framework's full tool sequence (multi-step)."""
+        return [
+            FrameworkDecision(tool=name, arguments=args, reasoning=f"{framework} agent called {name!r}")
+            for name, args in self.calls
+        ]
+
 
 def _capture_agent_fn(
     run: Callable[[str, list[Any]], Any], framework: str
@@ -151,6 +198,38 @@ def crewai_agent_fn(crew_factory: Callable[[list[Any], str], Any]) -> AgentFn:
     return _capture_agent_fn(run, "crewai")
 
 
+def _capture_plan_fn(run: Callable[[str, list[Any]], Any], framework: str) -> PlanFn:
+    """Like :func:`_capture_agent_fn`, but returns the framework's FULL tool sequence
+    (every captured call) so stampede's multi-step loop can replay it against the target."""
+
+    async def plan_fn(goal: str, tools: list[ToolInfo]) -> list[FrameworkDecision]:
+        capture = ToolCapture()
+        result = run(goal, capture.stub_tools(tools))
+        if inspect.isawaitable(result):
+            await result
+        return capture.decisions(framework)
+
+    return plan_fn
+
+
+def langgraph_plan_fn(graph_factory: Callable[[list[Any]], Any]) -> PlanFn:
+    """Multi-step LangGraph: capture the graph's whole tool sequence, not just the first call."""
+
+    def run(goal: str, stubs: list[Any]) -> Any:
+        return graph_factory(stubs).ainvoke({"messages": [("user", goal)]})
+
+    return _capture_plan_fn(run, "langgraph")
+
+
+def crewai_plan_fn(crew_factory: Callable[[list[Any], str], Any]) -> PlanFn:
+    """Multi-step CrewAI: capture the crew's whole tool sequence, not just the first call."""
+
+    def run(goal: str, stubs: list[Any]) -> Any:
+        return crew_factory(stubs, goal).kickoff()
+
+    return _capture_plan_fn(run, "crewai")
+
+
 def _import_ref(ref: str) -> Any:
     """Import ``"package.module:attr"`` and return the attribute."""
     if ":" not in ref:
@@ -163,11 +242,11 @@ def build_framework_brain(framework: str, ref: str) -> FrameworkBrain:
     """Load the user's agent from ``ref`` and wrap it per ``framework``."""
     target = _import_ref(ref)
     if framework == "langgraph":
-        # ref is a graph_factory(tools) -> compiled graph.
-        return FrameworkBrain(langgraph_agent_fn(target))
+        # ref is a graph_factory(tools) -> compiled graph. Multi-step replays its sequence.
+        return FrameworkBrain(plan_fn=langgraph_plan_fn(target))
     if framework == "crewai":
-        # ref is a crew_factory(tools, goal) -> Crew.
-        return FrameworkBrain(crewai_agent_fn(target))
+        # ref is a crew_factory(tools, goal) -> Crew. Multi-step replays its sequence.
+        return FrameworkBrain(plan_fn=crewai_plan_fn(target))
     if framework == "callable":
         # ref is already an AgentFn.
         return FrameworkBrain(target)
