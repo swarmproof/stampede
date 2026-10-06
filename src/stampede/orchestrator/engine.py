@@ -28,7 +28,7 @@ from agent_reliability_core.trace.tracer import Tracer
 from stampede.chaos.injector import ChaosAction, ChaosPolicy, FaultKind
 from stampede.chaos.recovery import RecoveryAssertion, RecoveryReport
 from stampede.population.agent import Agent, AgentState
-from stampede.population.brain import BrainPool, Observation
+from stampede.population.brain import BrainPool, Observation, StepRecord
 from stampede.population.providers import cost_usd
 from stampede.targets.base import AgentContext, IsolationMode, TargetAdapter, ToolCall, ToolSet
 from stampede.targets.safety import SafetyPosture
@@ -83,6 +83,7 @@ class Orchestrator:
         budget_usd: float = 5.0,
         executor: Executor | None = None,
         hub: LiveHub | None = None,
+        max_steps: int = 1,
     ) -> None:
         self.target = target
         self.tracer = tracer
@@ -90,6 +91,7 @@ class Orchestrator:
         self.chaos = chaos
         self.hub = hub
         self.executor = executor or AsyncioExecutor()
+        self.step_limit = max(1, max_steps)  # >1 → multi-step agents
         self.budget = _BudgetGuard(budget_usd)
         self.recovery_assert = RecoveryAssertion()
         self._recovery = RecoveryReport()
@@ -185,6 +187,16 @@ class Orchestrator:
         self._finish_session(session, agent, clock)
 
     async def _drive(self, agent, toolset, session, clock, chaos_rng, isolation_key) -> None:
+        """Dispatch to the single-decision engine (default) or the multi-step one.
+
+        ``step_limit == 1`` runs the proven, byte-identical single-decision path;
+        ``> 1`` runs the multi-step path (an agent re-decides after each result)."""
+        if self.step_limit <= 1:
+            await self._drive_single(agent, toolset, session, clock, chaos_rng, isolation_key)
+        else:
+            await self._drive_multi(agent, toolset, session, clock, chaos_rng, isolation_key)
+
+    async def _drive_single(self, agent, toolset, session, clock, chaos_rng, isolation_key) -> None:
         temp = agent.persona.temperament
         agent.sm.transition(AgentState.PLANNING)
         self._publish(agent)  # dot appears in the swarm, PLANNING
@@ -311,6 +323,101 @@ class Orchestrator:
             self._recovery.findings.append(
                 self.recovery_assert.check_exactly_once(agent.id, side_effect_key, fires, was_killed)
             )
+
+    async def _drive_multi(self, agent, toolset, session, clock, chaos_rng, isolation_key) -> None:
+        """Multi-step agent: observe each result, then decide again (create → use → …).
+
+        Chaos faults still apply per invoke; the single-step kill/recovery exactly-once
+        *dance* is specific to ``_drive_single`` (one tool, retried). Here an agent takes
+        a sequence of distinct decisions and stops when its brain signals ``done`` or
+        ``give_up``, or at ``step_limit``. Determinism holds: the per-agent RNG and the
+        seeded chaos RNG advance once per step, in order.
+        """
+        obs = Observation(turn=0)
+        realized: list[str] = []
+        expected = agent.goal.intent.expected_tool
+        any_ok = False
+        expected_ok = False
+
+        for step in range(self.step_limit):
+            if agent.sm.terminal:
+                break
+            obs.turn = step
+            agent.sm.transition(AgentState.PLANNING)
+            self._publish(agent)
+            if step > 0 and await self.budget.over():
+                break
+
+            chat = self.tracer.start(
+                "chat", kind=SpanKind.CLIENT, parent=session, side=SpanSide.AGENT, start_tick=clock.now()
+            )
+            chat.set(GenAI.OPERATION_NAME, "chat")
+            chat.set(GenAI.PROVIDER_NAME, agent.binding.provider)
+            chat.set(GenAI.REQUEST_MODEL, agent.binding.model)
+            decision = await self.brains.for_agent(agent).decide(agent, toolset, obs)
+            clock.advance(_THINK_LATENCY)
+            chat.set(GenAI.USAGE_INPUT_TOKENS, decision.input_tokens)
+            chat.set(GenAI.USAGE_OUTPUT_TOKENS, decision.output_tokens)
+            chat.set(Swarmproof.DECISION_REASONING, decision.reasoning)
+            turn_cost = cost_usd(
+                agent.binding.provider, agent.binding.model, decision.input_tokens, decision.output_tokens
+            )
+            chat.set(Swarmproof.COST_USD, round(turn_cost, 6))
+            self.tracer.end(chat, end_tick=clock.now())
+            await self._account(agent, decision.input_tokens, decision.output_tokens, turn_cost)
+
+            if step == 0:
+                agent.realized_tool = decision.tool  # feeds the misuse map (first reach)
+            self._publish(agent, tool=decision.tool, reasoning=decision.reasoning)
+
+            if decision.done or decision.tool is None or decision.give_up:
+                break
+
+            realized.append(decision.tool)
+            spec = toolset.get(decision.tool)
+            call = ToolCall(tool=decision.tool, arguments=decision.arguments)
+            agent.sm.transition(AgentState.ACTING)
+            action = self.chaos.before_invoke(chaos_rng)
+            if action.is_fault:
+                self._bump(action.kind.value)
+            result, latency = await self._invoke_with_chaos(
+                call, agent, spec, isolation_key, action, clock, session
+            )
+            clock.advance(latency)
+            agent.sm.transition(AgentState.WAITING)
+
+            if result.ok:
+                any_ok = True
+                if expected and decision.tool == expected:
+                    expected_ok = True
+                if spec is not None and spec.idempotency_arg and self.chaos.assert_recovery:
+                    key = str(
+                        decision.arguments.get(spec.idempotency_arg)
+                        or f"{agent.id}:{decision.tool}:{step}"
+                    )
+                    fires = 0 if result.side_effect_deduped else 1
+                    self._recovery.findings.append(
+                        self.recovery_assert.check_exactly_once(agent.id, key, fires, False)
+                    )
+
+            obs.history.append(
+                StepRecord(
+                    tool=decision.tool,
+                    arguments=decision.arguments,
+                    ok=result.ok,
+                    error=result.error,
+                    content=result.content,
+                )
+            )
+            obs.last_error = None if result.ok else result.error
+
+        # Misuse (ADR-5): a labeled goal whose intended tool was never called at all.
+        if agent.goal.labeled and expected:
+            agent.misuse = expected not in realized
+
+        succeeded = expected_ok if (agent.goal.labeled and expected) else any_ok
+        if not agent.sm.terminal:
+            agent.sm.transition(AgentState.DONE if succeeded else AgentState.FAILED)
 
     async def _invoke_with_chaos(self, call, agent, spec, isolation_key, action, clock, session):
         """Invoke the target, applying the chaos ``action``. Returns (result, latency)."""

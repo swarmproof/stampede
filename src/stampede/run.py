@@ -122,6 +122,7 @@ async def run_simulation(
         chaos=chaos_policy,
         budget_usd=config.report.budget_usd,
         hub=hub,
+        max_steps=config.population.max_steps,
     )
     try:
         outcome = await orch.run(

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
 from stampede.population.agent import Agent
 from stampede.population.providers import ModelProvider
@@ -32,9 +32,23 @@ def _tokens(text: str) -> set[str]:
 
 
 @dataclass
+class StepRecord:
+    """One completed step of a multi-step agent: the tool it called and the outcome.
+    Fed back via :class:`Observation` so the next decision can react (e.g. create the
+    missing customer the previous charge complained about)."""
+
+    tool: str
+    arguments: dict[str, Any]
+    ok: bool
+    error: str = ""
+    content: str = ""
+
+
+@dataclass
 class Observation:
     turn: int
     last_error: str | None = None
+    history: list[StepRecord] = field(default_factory=list)  # prior steps (multi-step only)
 
 
 @dataclass
@@ -43,6 +57,7 @@ class Decision:
     arguments: dict = field(default_factory=dict)
     reasoning: str = ""
     give_up: bool = False
+    done: bool = False  # multi-step: the agent believes the goal is achieved → stop
     input_tokens: int = 0
     output_tokens: int = 0
 
@@ -87,6 +102,10 @@ def _modeled_tokens(agent: Agent, toolset: ToolSet, turn: int) -> tuple[int, int
 
 class HeuristicBrain:
     async def decide(self, agent: Agent, toolset: ToolSet, obs: Observation) -> Decision:
+        # Multi-step only: the heuristic makes its one reach for the goal, then stops —
+        # it has no model to sequence prerequisites, so step 1+ is a clean "done".
+        if obs.turn > 0:
+            return Decision(tool=None, done=True, reasoning="heuristic brain: single reach complete")
         temp = agent.persona.temperament
         inp, out = _modeled_tokens(agent, toolset, obs.turn)
         expected = agent.goal.intent.expected_tool
@@ -153,13 +172,25 @@ class LLMBrain:
             for t in toolset.tools
         ]
         system = agent.persona.prompt_template or "Pursue your goal using the tools."
-        user = agent.goal.text
-        if obs.last_error:
-            user += f"\n\n(Your previous attempt failed: {obs.last_error})"
+        # Build the conversation. Single-step runs with an empty history (unchanged);
+        # multi-step replays prior tool calls + results so the model can sequence
+        # (e.g. see "no such customer" and create one before charging).
+        messages: list[dict] = [{"role": "user", "content": agent.goal.text}]
+        for rec in obs.history:
+            messages.append({"role": "assistant", "content": f"I called {rec.tool}({rec.arguments})."})
+            if rec.ok:
+                messages.append({"role": "user", "content":
+                    f"That succeeded: {rec.content or 'ok'}. If the goal is now complete, reply "
+                    f"without calling a tool; otherwise call the next tool."})
+            else:
+                messages.append({"role": "user", "content":
+                    f"That failed: {rec.error}. Fix the call or try a different tool to make progress."})
+        if not obs.history and obs.last_error:
+            messages.append({"role": "user", "content": f"(Your previous attempt failed: {obs.last_error})"})
         try:
             comp = await self.provider.complete(
                 system=system,
-                messages=[{"role": "user", "content": user}],
+                messages=messages,
                 tools=tools,
                 model=agent.binding.model,
                 temperature=0.0,  # temp 0 for reproducibility within the noise band
@@ -173,10 +204,15 @@ class LLMBrain:
                 give_up=True,
             )
         if not comp.tool_calls:
+            # No tool call. After at least one success, read it as "goal achieved"
+            # (done); with nothing accomplished yet, it's a give-up (e.g. the model
+            # asked for details it doesn't have).
+            achieved = any(r.ok for r in obs.history)
             return Decision(
                 tool=None,
-                reasoning=comp.text or "model returned no tool call",
-                give_up=True,
+                reasoning=comp.text or ("goal achieved" if achieved else "model returned no tool call"),
+                done=achieved,
+                give_up=not achieved,
                 input_tokens=comp.input_tokens,
                 output_tokens=comp.output_tokens,
             )
