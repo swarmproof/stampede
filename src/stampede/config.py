@@ -49,6 +49,11 @@ class PopulationConfig(BaseModel):
     mix: dict[str, float] = Field(default_factory=lambda: {"naive": 1.0})
     models: list[str] = Field(default_factory=lambda: ["dry-run:heuristic"])
     pack: str = "core"  # persona pack name or path
+    # Max distinct tool decisions an agent may make in one life. 1 (default) = the
+    # single-decision engine — the misuse-map measurement, byte-identical as before.
+    # >1 enables multi-step: an agent observes each result and decides again (e.g.
+    # create_customer → create_charge), which live brains need for stateful targets.
+    max_steps: int = Field(default=1, ge=1)
     grounded_against: str | None = None  # recording path → report a realism score (FR-OB-07)
     # v0.3 framework adapter: drive the swarm with your own agent (NG-3-respecting).
     framework: Literal["langgraph", "crewai", "callable"] = "langgraph"
