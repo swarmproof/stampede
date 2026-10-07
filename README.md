@@ -22,7 +22,9 @@ stampede generates a *population* of heterogeneous, stateful, realistically-flaw
 ```bash
 # from source (v0.1 — not yet on PyPI):
 git clone https://github.com/swarmproof/stampede && cd stampede
-python -m venv .venv && .venv/bin/pip install -e .
+python -m venv .venv
+.venv/bin/pip install -e './core[render]'   # the shared primitives (vendored in-tree)
+.venv/bin/pip install -e .                   # then stampede, which depends on them
 
 stampede init                       # writes a starter stampede.yaml (targets a mock world)
 stampede run --dry-run              # zero-LLM, deterministic — watch the misuse map appear
