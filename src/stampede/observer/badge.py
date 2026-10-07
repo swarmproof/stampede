@@ -32,8 +32,7 @@ _GRADE_COLOR = {
 def _overall(report: RunReport) -> tuple[float, float]:
     n = len(report.success) or 1
     success = sum(s.success_rate for s in report.success) / n
-    misuse = sum(s.misuse_rate for s in report.success) / n
-    return success, misuse
+    return success, report.misuse_rate  # the n-weighted aggregate — matches the JSON (#37)
 
 
 def summary(report: RunReport) -> dict[str, Any]:
