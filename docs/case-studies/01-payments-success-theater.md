@@ -1,8 +1,8 @@
 # Case study #1 — Success theater in a payments API
 
-*What a 60-agent stampede found in the `payments` world: every agent succeeded, one in four succeeded at the wrong thing.*
+*What a 60-agent stampede found in the `payments` world: every agent succeeded, two in five succeeded at the wrong thing.*
 
-Author: stampede team · Date: 2026-09-07 · Status: reproducible (seed 42)
+Author: stampede team · Date: 2026-10-07 · Status: reproducible (seed 42) · figures locked by `tests/test_case_study.py`
 
 > Companions: run it yourself with [`payments.stampede.yaml`](./payments.stampede.yaml). The pitch is in [`../../README.md`](../../README.md); the mechanics behind every number here are in [`../ARCHITECTURE.md`](../ARCHITECTURE.md).
 
@@ -10,7 +10,7 @@ Author: stampede team · Date: 2026-09-07 · Status: reproducible (seed 42)
 
 ## The one-line finding
 
-**100% task success. 24% misuse.** Every one of 60 agents finished its task. Roughly one in four finished *a different task than the one it was given* — and the single most common confusion was between **listing charges** and **actually charging the customer**.
+**100% task success. 39% misuse.** Every one of 60 agents finished its task. Roughly two in five finished *a different task than the one it was given* — and the single most common confusion was between **listing charges** and **actually charging the customer**.
 
 A green "100% success" dashboard would have shipped this API. The misuse map is the reason you shouldn't.
 
@@ -38,7 +38,7 @@ Everything below is read straight from that run's report. Re-run it and you get 
 
 ### 1. The misuse map — the headline
 
-Task success was 100% for every persona. But on the *labeled* goals (where stampede knows the intended tool), agents realized the wrong tool 24% of the time:
+Task success was 100% for every persona. But on the *labeled* goals (where stampede knows the intended tool), agents realized the wrong tool **39%** of the time — the aggregate over all labeled goals (`misuse_rate` in the report, misused ÷ labeled). The two most-used tools account for it:
 
 | Goal expected | Agents actually called | Confusion | n |
 |---|---|---|---|
