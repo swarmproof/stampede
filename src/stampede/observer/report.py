@@ -90,6 +90,9 @@ class RunReport:
     adversarial: dict[str, Any] = field(default_factory=dict)
     grade: str = "F"
     overall_score: float = 0.0
+    # Aggregate misuse over ALL labeled agents (misused ÷ labeled) — the n-weighted
+    # rate, the single source the terminal, badge, and JSON all read (#37).
+    misuse_rate: float = 0.0
     realism: dict[str, Any] | None = None  # ⊕ FR-OB-07, set when grounded_against is used
 
     # ---- deterministic serialization ----
@@ -108,6 +111,7 @@ class RunReport:
                 "safety_posture": self.safety_posture,
                 "grade": self.grade,
                 "overall_score": round(self.overall_score, 4),
+                "misuse_rate": round(self.misuse_rate, 4),  # misused ÷ labeled, all agents
             },
             "success": [
                 {
@@ -267,10 +271,14 @@ def build_report(
     adversarial = build_economic_section(agents, adversarial, store)
 
     # ---- overall grade ----
+    # Misuse is aggregated over ALL labeled agents (n-weighted), so a large, high-misuse
+    # persona isn't diluted by small clean ones — the single rate the terminal, badge,
+    # and JSON all report (#37). It equals Σ(persona misuse_rate × n) ÷ Σ n.
+    labeled_all = [a for a in agents if a.goal.labeled]
+    aggregate_misuse = (sum(1 for a in labeled_all if a.misuse) / len(labeled_all)) if labeled_all else 0.0
     overall_success = _mean([s.success_rate for s in success])
-    overall_misuse = _mean([s.misuse_rate for s in success])
     violation_penalty = 0.15 if chaos["exactly_once_violations"] else 0.0
-    score = max(0.0, overall_success - 0.5 * overall_misuse - violation_penalty)
+    score = max(0.0, overall_success - 0.5 * aggregate_misuse - violation_penalty)
 
     duration = max((s.end_tick for s in store.iter_spans()), default=0)
 
@@ -293,6 +301,7 @@ def build_report(
         adversarial=adversarial,
         overall_score=score,
         grade=grade_for_score(score),
+        misuse_rate=aggregate_misuse,
     )
     return report
 

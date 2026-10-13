@@ -26,8 +26,7 @@ from stampede.observer.report import RunReport
 def _overall(report: RunReport) -> tuple[float, float]:
     n = len(report.success) or 1
     succ = sum(s.success_rate for s in report.success) / n
-    mis = sum(s.misuse_rate for s in report.success) / n
-    return succ, mis
+    return succ, report.misuse_rate  # the n-weighted aggregate — matches the JSON (#37)
 
 
 def to_report(r: RunReport) -> Report:
