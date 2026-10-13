@@ -1,8 +1,8 @@
 # stampede — Roadmap
 
-Status: updated 2026-09-04 · Legend: ✅ shipped · 🚧 partial / scaffolded · ⬜ not started
+Status: updated 2026-10-13 · Legend: ✅ shipped · 🚧 partial / scaffolded · ⬜ not started
 
-The implementation ran well ahead of the original roadmap — most of v0.1 and v0.2 and a chunk of v0.3 are shipped, plus a set of features that weren't on the original list (see *Shipped beyond the original roadmap*). Remaining items are mostly gated on external infra (Ray, Foundry) or a sibling repo (mockworld).
+The implementation ran well ahead of the original roadmap — most of v0.1 and v0.2 and a chunk of v0.3 are shipped, plus a set of features that weren't on the original list (see *Shipped beyond the original roadmap*). Remaining items are mostly gated on external infra (Ray, Foundry).
 
 ## v0.1 (launch)
 - ✅ MCPTarget + HTTPTarget adapters (+ in-process MockTarget worlds)
@@ -22,7 +22,7 @@ The implementation ran well ahead of the original roadmap — most of v0.1 and v
 - ✅ Run-diffing in CI (`stampede diff` — statistical, signal-vs-noise)
 
 ## v0.3
-- ⬜ mockworld integration (`stampede` targets a `mockworld` world) *(needs the mockworld sibling)*
+- ✅ mockworld integration — `target: {type: mockworld}` runs the full mockworld mock library in-process with deterministic `reset(seed)` (needs `stampede[mockworld]`)
 - ✅ Framework adapters (LangGraph / CrewAI) — drive the swarm with your own agent
 - ⬜ Hosted report sharing *(seed of the commercial tier)*
 
@@ -41,4 +41,4 @@ Features and milestones delivered that weren't on the list above:
 ## Nearest up next
 1. EVMTarget live-fork path (signed tx + ABI→ToolSet) against an Anvil fork.
 2. Ray executor backend for 2,000+ agent runs.
-3. costbomb standalone extraction; mockworld deep integration.
+3. costbomb standalone extraction.

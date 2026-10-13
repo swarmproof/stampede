@@ -37,7 +37,8 @@ Legend: ✅ shipped & tested · 🚧 partial / scaffolded · ⬜ not started. Se
 | **E16** agent-postmortems incident replay | ✅ |
 | **E17** extract `agent-reliability-core` (ADR-4) | ✅ all four primitives extracted |
 | **E19** framework adapters (LangGraph / CrewAI) | ✅ |
-| **E18** mockworld deep integration · **E20** A2ATarget · **E21** governance chaos · **E22** hosted sharing | ⬜ (sibling / commercial / infra-gated) |
+| **E18** mockworld deep integration (`mockworldTarget`, `FR-TA-07`) | ✅ in-process mockworld Engine as a one-flag `type: mockworld` target, deterministic `reset(seed)` (`stampede[mockworld]`) |
+| **E20** A2ATarget · **E21** governance chaos · **E22** hosted sharing | ⬜ (commercial / infra-gated) |
 
 Also shipped beyond the plan: live LLM model-mixing (verified against Ollama), full CLI test coverage, and the mandatory Safety Gate + exactly-once recovery as first-class, tested features. The deterministic `--dry-run` path carries the CI gate (142 tests; both packages lint/type-clean).
 
@@ -122,7 +123,7 @@ E1 (primitives) ──┬──► E2 (targets+safety) ──┐
                   └──────────────────────────┘
                                                         │
 v0.2:  E8 needs E2+E4 ; E9 needs E5(record) ; E11 needs E3(costbomb) ; E12 needs E4 ; E13 needs E5+E1(seed) ; E17 needs stable E1
-v0.3:  E18 needs mockworld v0.1 ; E19/E20 need E2 ; E22 needs E5(report) + E13
+v0.3:  E18 needs mockworld v0.1 (✅ satisfied — mockworld released) ; E19/E20 need E2 ; E22 needs E5(report) + E13
 ```
 
 Critical path to launch: **E1 → E4 → E5 → E7** (primitives → orchestrator/chaos → observer/report → demo). E2 and E3 parallelize against E1 once the protocols land. The report (T5.3) and the demo (T7.x) are the launch-gating artifacts — protect their time.
