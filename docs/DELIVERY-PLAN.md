@@ -18,7 +18,7 @@ Notation: **⊕** = work added beyond `SPEC.md`.
 | **v0.2** | *The premium + the flywheel* | EVMTarget (open-Gauntlet), persona grounding + registry, costbomb extracted, Ray backend, run-diffing, record mode, badge, `--from-probe`, incident replay | ~34 IED |
 | **v0.3** | *The world + the commercial seed* | mockworld deep integration, framework adapters, A2ATarget, governance chaos, hosted report sharing | ~26 IED |
 
-### Implementation status (as of 2026-09-04)
+### Implementation status (as of 2026-10-14)
 
 Legend: ✅ shipped & tested · 🚧 partial / scaffolded · ⬜ not started. See `ROADMAP.md` for the public view.
 
@@ -40,7 +40,7 @@ Legend: ✅ shipped & tested · 🚧 partial / scaffolded · ⬜ not started. Se
 | **E18** mockworld deep integration (`mockworldTarget`, `FR-TA-07`) | ✅ in-process mockworld Engine as a one-flag `type: mockworld` target, deterministic `reset(seed)` (`stampede[mockworld]`) |
 | **E20** A2ATarget · **E21** governance chaos · **E22** hosted sharing | ⬜ (commercial / infra-gated) |
 
-Also shipped beyond the plan: live LLM model-mixing (verified against Ollama), full CLI test coverage, and the mandatory Safety Gate + exactly-once recovery as first-class, tested features. The deterministic `--dry-run` path carries the CI gate (142 tests; both packages lint/type-clean).
+Also shipped beyond the plan: live LLM model-mixing (verified against Ollama), full CLI test coverage, and the mandatory Safety Gate + exactly-once recovery as first-class, tested features. Later additions: **multi-step agents** (`max_steps`, incl. framework-agent sequence replay), **schema-aware + traffic goal synthesis** (`FR-GS-05`), **type-aware heuristic args**, and **reproducibility hardening** (experiment-fingerprint `run_id`; one n-weighted misuse rate across terminal/badge/JSON; case-study figures locked by a drift test). `agent-reliability-core` is **packaged for PyPI** (build + `twine check` + Trusted-Publishing workflow ready; tag to ship). The deterministic `--dry-run` path carries the CI gate (**187 tests**; both packages lint/type-clean).
 
 ---
 
