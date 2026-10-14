@@ -75,6 +75,9 @@ class GoalsConfig(BaseModel):
     autogenerate: bool = True
     mode: Literal["llm", "template", "traffic"] = "template"
     extra: list[str] = Field(default_factory=list)
+    # mode: "traffic" → replay recorded tool calls as goals (FR-GS-05). Path to a JSON
+    # array of observed calls: [{"tool": str, "arguments"?: {...}, "text"?: str}, …].
+    traffic: str | None = None
 
 
 class ConcurrencyConfig(BaseModel):

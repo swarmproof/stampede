@@ -1,0 +1,25 @@
+# Traffic-mode goal synthesis (FR-GS-05): replay REAL recorded tool calls as goals,
+# instead of the template grammar. Point goals.traffic at a JSON array of observed
+# calls — from your production logs, or a prior run — and each becomes one labeled
+# goal, so the swarm exercises your system with its *real* traffic shape.
+#
+#   stampede run --dry-run --config examples/traffic_goals.yaml
+#
+# Recording format (examples/traffic.json):
+#   [{"tool": "<name>", "arguments": {...}, "text": "<optional phrasing>"}, ...]
+# Calls naming a tool the target doesn't expose are skipped; the list is cycled to
+# fill the population.
+
+target: { type: mock, world: crm }
+
+population:
+  size: 20
+  mix: { naive: 0.6, expert: 0.4 }
+  models: [dry-run:heuristic]
+
+goals:
+  mode: traffic
+  traffic: examples/traffic.json   # ← the recorded calls to replay
+
+concurrency: { curve: ramp, peak: 20, hold: 0 }
+seed: 42

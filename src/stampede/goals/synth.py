@@ -17,6 +17,8 @@ cover, so the built-in worlds stay byte-identical.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 from stampede.goals.schema import Goal, GoalMode, Intent
@@ -156,6 +158,46 @@ def _phrase(tool: ToolSpec, idx: int) -> tuple[str, Intent, str, dict[str, str]]
     )
 
 
+def _goals_from_traffic(toolset: ToolSet, traffic_path: str, count: int) -> list[Goal]:
+    """Replay recorded tool calls as intent-labeled goals (FR-GS-05).
+
+    The recording is a JSON array of observed calls — your real system's traffic, or
+    a prior run's: ``[{"tool": str, "arguments"?: {...}, "text"?: str}, …]``. Each call
+    becomes one goal, labeled with the tool actually called (the misuse oracle knows
+    the intended tool *from the recording*, not a guess). Calls for tools the target
+    doesn't expose are skipped. Deterministic: file order, cycled to fill ``count``.
+    """
+    raw = json.loads(Path(traffic_path).read_text())
+    if not isinstance(raw, list):
+        raise ValueError(f"traffic recording must be a JSON array of calls, got {type(raw).__name__}")
+    calls = [e for e in raw if isinstance(e, dict) and toolset.get(str(e.get("tool"))) is not None]
+    if not calls:
+        raise ValueError(
+            f"no recorded calls in {traffic_path!r} name a tool this target exposes "
+            f"(have: {', '.join(t.name for t in toolset.tools)})"
+        )
+    goals: list[Goal] = []
+    i = 0
+    while len(goals) < max(count, 1):
+        entry = calls[i % len(calls)]
+        tool = str(entry["tool"])
+        args = {str(k): str(v) for k, v in (entry.get("arguments") or {}).items()}
+        detail = ", ".join(f"{k}={v}" for k, v in args.items())
+        text = str(entry.get("text") or (f"Use {tool} with {detail}." if detail else f"Use {tool}."))
+        goals.append(
+            Goal(
+                id=f"g_traffic_{i}",
+                text=text,
+                difficulty="easy",
+                intent=Intent(expected_tool=tool, expected_effect=f"{tool} (replayed from traffic)"),
+                labeled=True,
+                args=args,
+            )
+        )
+        i += 1
+    return goals
+
+
 class GoalSynthesizer:
     def synthesize(
         self,
@@ -164,9 +206,15 @@ class GoalSynthesizer:
         mode: GoalMode = "template",
         count: int = 12,
         seed: int = 42,
+        traffic: str | None = None,
     ) -> list[Goal]:
         if mode == "traffic":
-            raise NotImplementedError("traffic-derived goals land in v0.2 (FR-GS-05)")
+            if not traffic:
+                raise ValueError(
+                    "goals.mode='traffic' needs goals.traffic: a path to a recorded-calls JSON "
+                    "(see FR-GS-05)"
+                )
+            return _goals_from_traffic(toolset, traffic, count)
         # llm mode falls back to template in v0.1 when offline — still labeled.
         goals: list[Goal] = []
 
@@ -211,5 +259,6 @@ def synthesize(
     mode: GoalMode = "template",
     count: int = 12,
     seed: int = 42,
+    traffic: str | None = None,
 ) -> list[Goal]:
-    return GoalSynthesizer().synthesize(toolset, extra or [], mode, count, seed)
+    return GoalSynthesizer().synthesize(toolset, extra or [], mode, count, seed, traffic)

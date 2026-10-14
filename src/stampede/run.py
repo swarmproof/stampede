@@ -89,6 +89,7 @@ async def run_simulation(
         mode=config.goals.mode,
         count=max(12, min(config.population.size, 64)),
         seed=config.seed,
+        traffic=config.goals.traffic,
     )
 
     # 4. Build the population.
