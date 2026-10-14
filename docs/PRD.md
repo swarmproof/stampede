@@ -65,7 +65,7 @@ Grouped by subsystem. Each has an ID, a MoSCoW tier, and the target milestone.
 | FR-TA-04 | `EVMTarget` pointing at an Anvil/Foundry **mainnet fork**; agents hold funded test wallets; tool calls become transactions. | Should | v0.2 |
 | FR-TA-05 ⊕ | **Target Safety Gate**: an allowlist + explicit non-production acknowledgement; `EVMTarget` refuses a non-fork RPC by default (verifies fork marker / `chainId`). | Must | v0.1 |
 | FR-TA-06 ⊕ | **Per-agent target state isolation policy**: use session/tenant isolation where the target supports it; else `reset()` between waves; document confounding otherwise. | Should | v0.1 |
-| FR-TA-07 | `mockworldTarget` convenience: point stampede directly at a mockworld world. | Could | v0.3 |
+| FR-TA-07 | `mockworldTarget` convenience: point stampede directly at a mockworld world. | Could | ✅ shipped (in-process) |
 | FR-TA-08 ⊕ | `A2ATarget` for Agent-to-Agent protocol endpoints. | Could | v0.3+ |
 
 ### 3.2 Population Factory (`FR-PF`)
@@ -233,7 +233,7 @@ Packaging decision (per portfolio doc): **vendor-per-repo now, extract to `agent
 ### 7.2 Sibling integrations
 | Sibling | Integration | Milestone |
 |---|---|---|
-| **mockworld** | stampede targets a mockworld world (safe demo surface; delete-vs-archive misuse demo) | v0.1 demo / v0.3 deep |
+| **mockworld** | stampede targets a mockworld world (safe demo surface; delete-vs-archive misuse demo) | ✅ shipped (`type: mockworld`) |
 | **costbomb** | embedded as `adversarial:economic` cohort, then extracted | v0.1 → v0.2 |
 | **exactly-once** | asserted in chaos recovery (side-effect uniqueness) | v0.1 |
 | **agent-postmortems** | incidents ingested as chaos scenarios | v0.2 |

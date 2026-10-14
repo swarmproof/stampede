@@ -73,7 +73,7 @@ class TargetAdapter(Protocol):
 | `MCPTarget` (v0.1) | stdio / HTTP-SSE | MCP `initialize`, JSON-RPC, SSE persistence handled here — the specifics generic load tools miss. |
 | `HTTPTarget` (v0.1) | HTTP | OpenAPI/REST spec → ToolSet. |
 | `EVMTarget` (v0.2) | JSON-RPC to Anvil fork | Agents hold funded test wallets; `invoke` → signed tx; `safety_descriptor` asserts fork. |
-| `mockworldTarget` (v0.3) | MCP | Thin wrapper — a mockworld world *is* an MCPTarget. |
+| `MockworldTarget` ✅ | in-process | Runs a mockworld `Engine` in-process (the full mock library), deterministic `reset(seed)`; one-flag `type: mockworld`. Needs `stampede[mockworld]`. |
 | `A2ATarget` (v0.3+) ⊕ | A2A | Protocol-agnostic slot. |
 
 ### 2.2 Target Safety Gate ⊕ (`FR-TA-05`, `NFR-SEC-01`)
@@ -381,7 +381,7 @@ report:
 | **persona-pack** | stampede *defines* the `swarmproof.dev/persona/v1` schema; costbomb consumes `adversarial:economic` | stampede → costbomb |
 | **report-renderer** | stampede *defines* the `RunReport`→HTML/terminal renderer + theme tokens | stampede → mcp-probe, costbomb |
 | **concurrency-core** | stampede *defines* the `Scheduler`/`Executor` protocol; mcp-probe's load engine imports it | stampede → mcp-probe |
-| **mockworld** | consumes a mockworld world as `mockworldTarget` (an MCPTarget) | mockworld → stampede |
+| **mockworld** | ✅ consumes the mockworld mock library as `MockworldTarget` (in-process `Engine`, `type: mockworld`) | mockworld → stampede |
 | **costbomb** | embeds costbomb's attack library as a cohort; later imports the extracted CLI | bidirectional |
 | **exactly-once** | calls `Store.claim/commit` in the recovery assertion | exactly-once → stampede |
 | **agent-postmortems** | reads incident YAML (its schema) → chaos scenarios | postmortems → stampede |
