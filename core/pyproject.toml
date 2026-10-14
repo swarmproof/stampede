@@ -5,10 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "agent-reliability-core"
 version = "0.1.0"
-description = "Shared primitives for the Swarm Proof agent-reliability toolkit — the OTel GenAI trace-format, and (soon) persona-pack, report-renderer, and concurrency-core."
+description = "Shared primitives for the Swarm Proof agent-reliability toolkit: the OTel GenAI trace-format, persona-pack, report-renderer, and concurrency-core."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Swarm Proof" }]
 keywords = ["opentelemetry", "gen-ai", "agents", "reliability", "trace-format"]
 classifiers = [
@@ -31,7 +32,10 @@ otel = ["opentelemetry-api>=1.27", "opentelemetry-sdk>=1.27"]
 render = ["jinja2>=3.1", "rich>=13.7"]
 
 [project.urls]
-Homepage = "https://github.com/swarmproof/agent-reliability-core"
+# Lives in-tree under stampede's core/ (the canonical source) until it gets its own repo.
+Homepage = "https://github.com/swarmproof/stampede/tree/main/core"
+Repository = "https://github.com/swarmproof/stampede"
+Issues = "https://github.com/swarmproof/stampede/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_reliability_core"]
