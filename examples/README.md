@@ -110,6 +110,20 @@ stampede run --config examples/multi_step.yaml     # live; agents sequence creat
 See [`../docs/guides/multi-step-agents.md`](../docs/guides/multi-step-agents.md) for how
 it changes the misuse map and where its ceiling is.
 
+## Replay real traffic as goals
+
+Instead of the template grammar, drive the swarm with **recorded tool calls** — your
+production traffic, or a prior run — so it exercises your system's *real* shape:
+
+```bash
+stampede run --dry-run --config examples/traffic_goals.yaml
+```
+
+`goals.mode: traffic` reads a JSON array of observed calls
+(`[{"tool": "...", "arguments": {...}, "text": "..."}, ...]`, see
+[`traffic.json`](./traffic.json)); each becomes one intent-labeled goal. Calls for
+tools the target doesn't expose are skipped; the list is cycled to fill the population.
+
 ## CI gate
 
 ```bash

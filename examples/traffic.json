@@ -1,0 +1,6 @@
+[
+  {"tool": "archive_record", "arguments": {"record_id": "rec_1"}, "text": "Archive customer record rec_1 — keep it recoverable."},
+  {"tool": "find_records", "arguments": {"query": "overdue"}, "text": "Find the overdue records."},
+  {"tool": "archive_record", "arguments": {"record_id": "rec_2"}},
+  {"tool": "delete_record", "arguments": {"record_id": "rec_3"}, "text": "Permanently delete rec_3 — it's spam."}
+]
